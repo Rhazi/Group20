@@ -11,8 +11,6 @@ def main():
     signals = []
     for tick in data_points:
         signals.append(MAStrategy.generate_signals(tick))
-        for signal in signals:
-            print(signal)
     # 3. make signals to code
     orders = []
     for signal in signals:
