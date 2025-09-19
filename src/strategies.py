@@ -52,12 +52,12 @@ class macd(Strategy): # moving average convergence divergence
     
         return signals
 
-def ema(prices, window): #exponential moving average
-    alpha = 2 / (window + 1)
-    v = []
-    prev = prices[0]
-    for p in prices:
-        ema = alpha * p + (1 - alpha) * prev
-        v.append(ema)
-        prev = ema
-    return v
+    def ema(prices, window): #exponential moving average
+        alpha = 2 / (window + 1)
+        v = []
+        prev = prices[0]
+        for p in prices:
+            ema = alpha * p + (1 - alpha) * prev
+            v.append(ema)
+            prev = ema
+        return v
