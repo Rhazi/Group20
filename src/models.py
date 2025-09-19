@@ -7,6 +7,15 @@ class MarketDataPoint:
     symbol: str
     price: float
 
+class OrderStatus(Enum):
+    UNFILLED = "UNFILLED"
+    FILLED = "FILLED"
+    CANCELLED = "CANCELLED"
+
+class OrderAction(Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+    
 class Order:
     def __init__(self, symbol: str, quantity: float, price: float, status: str):
         self.symbol = symbol
