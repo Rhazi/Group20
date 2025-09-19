@@ -14,12 +14,6 @@ class Order:
         self.price = price
         self.status = status
 
-class Portfolio:
-    def __init__(self):
-        self.positions = {} # {'AAPL': {'quantity': 0, 'avg_price': 0.0}}
-        self.earnings = 0.0
-        self.volatility = [] 
-
 class OrderError(Exception):
     pass
 
