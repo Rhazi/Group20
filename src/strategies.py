@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from models import MarketDataPoint
+from models import MarketDataPoint, OrderAction
 
 class Strategy(ABC):
     @abstractmethod
@@ -21,8 +21,8 @@ class MovingAverageCrossoverStrategy(Strategy):
             long_ma = sum(self.prices[-self.long_window:]) / self.long_window
             
             if short_ma > long_ma:
-                signals.append(('BUY', tick.symbol, 100, tick.price))
+                signals.append((OrderAction.BUY, tick.symbol, 100, tick.price))
             elif short_ma < long_ma:
-                signals.append(('SELL', tick.symbol, 100, tick.price))
+                signals.append((OrderAction.SELL, tick.symbol, 100, tick.price))
         
         return signals
