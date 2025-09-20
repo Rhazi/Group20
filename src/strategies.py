@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 import matplotlib.pyplot as plt
-from models import MarketDataPoint, OrderAction
+from models import OrderAction
 
 class Strategy(ABC):
     @abstractmethod
@@ -52,15 +52,15 @@ class macd(Strategy):  # moving average convergence divergence
             if macd_line > signal_line:
                 if self.prev == OrderAction.BUY.value:
                     self.prev = OrderAction.HOLD.value
-                    signals.append((OrderAction.HOLD.value, tick.price, 100, tick.price))
+                    signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
                 else:
-                    signals.append((OrderAction.BUY.value, tick.price, 100, tick.price))
+                    signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))
             else:
                 if self.prev == OrderAction.SELL.value:
                     self.prev = OrderAction.HOLD.value
-                    signals.append((OrderAction.HOLD.value, tick.price, 100, tick.price))
+                    signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
                 else:
-                    signals.append((OrderAction.SELL.value, tick.price, 100, tick.price))
+                    signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
 
         return signals
 

@@ -72,8 +72,8 @@ class ExecutionEngine:
                     try:
                         order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action)
                         executed_order = self.execute_order(order, self.portfolio[strategy_name])
-                        print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
-                        print(f"Portfolio: {self.portfolio}")
+                        # print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
+                        # print(f"Portfolio: {self.portfolio}")
                     except OrderError as e:
                         print(f"Order Creation Failed: {e}")
                     except ExecutionError as e:
