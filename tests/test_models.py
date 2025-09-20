@@ -1,6 +1,7 @@
 import pytest
 import datetime
-from src.models import MarketDataPoint, Order, OrderError, OrderStatus
+from src.models import MarketDataPoint, Order, OrderAction, OrderStatus, OrderError, ExecutionError
+from src.engine import ExecutionEngine
 from pathlib import Path
 import csv
 
@@ -45,6 +46,7 @@ def test_order_mutable_behavior_and_validation():
     o.status = OrderStatus.FILLED.value
     assert o.status == OrderStatus.FILLED.value
 
+    # Order validation tests
     # invalid quantity
     with pytest.raises(OrderError):
         Order(symbol='AAPL', quantity=0, price=100.0, status=OrderStatus.UNFILLED.value)
@@ -60,3 +62,36 @@ def test_order_mutable_behavior_and_validation():
     # invalid status
     with pytest.raises(OrderError):
         Order(symbol='AAPL', quantity=1, price=10.0, status='BADSTATUS')
+
+def test_order_execution_error():
+    # Create sample market data
+    market_data = [
+        MarketDataPoint(timestamp=datetime.datetime.now(), symbol='AAPL', price=150.0),
+        MarketDataPoint(timestamp=datetime.datetime.now(), symbol='AAPL', price=155.0),
+    ]
+
+    # Initialize execution engine with market data
+    mock_engine = ExecutionEngine(market_data)
+    
+    # Attempt to buy with insufficient capital
+    expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value)
+    with pytest.raises(ExecutionError):
+        mock_engine.execute_order(OrderAction.BUY.value, expensive_order)
+
+    # Attempt to without owning shares
+    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value)
+    with pytest.raises(ExecutionError):
+        mock_engine.execute_order(OrderAction.SELL.value, sell_order)
+
+    # Set up a position for mock engine
+    mock_engine.portfolio.positions['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
+
+    # Attempt to sell more than owned
+    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value)
+    with pytest.raises(ExecutionError):
+        mock_engine.execute_order(OrderAction.SELL.value, sell_order)
+    
+
+    
+
+    

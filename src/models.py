@@ -25,7 +25,7 @@ class ExecutionError(Exception):
     pass    
 
 class Order:
-    def __init__(self, symbol: str, quantity: float, price: float, status: str):
+    def __init__(self, symbol: str, quantity: float, price: float, status: str, action: str = None):
         if quantity <= 0:
             raise OrderError("Quantity must be positive")
         if price <= 0:
@@ -39,4 +39,5 @@ class Order:
         self.quantity = quantity
         self.price = price
         self.status = status
+        self.action = action
 
