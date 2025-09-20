@@ -1,7 +1,7 @@
 import pytest
 import datetime
-from src.models import MarketDataPoint, Order, OrderAction, OrderStatus, OrderError, ExecutionError
-from src.engine import ExecutionEngine
+from models import MarketDataPoint, Order, OrderAction, OrderStatus, OrderError, ExecutionError
+from engine import ExecutionEngine
 from pathlib import Path
 import csv
 
@@ -32,7 +32,7 @@ def test_csv_parses_into_frozen_dataclass():
 
 def test_order_mutable_behavior_and_validation():
     # valid order
-    o = Order(symbol='AAPL', quantity=10, price=100.0, status=OrderStatus.UNFILLED.value)
+    o = Order(symbol='AAPL', quantity=10, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
     assert o.symbol == 'AAPL'
     assert o.quantity == 10
 
@@ -49,19 +49,19 @@ def test_order_mutable_behavior_and_validation():
     # Order validation tests
     # invalid quantity
     with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=0, price=100.0, status=OrderStatus.UNFILLED.value)
+        Order(symbol='AAPL', quantity=0, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
 
     # invalid price
     with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=1, price=0.0, status=OrderStatus.UNFILLED.value)
+        Order(symbol='AAPL', quantity=1, price=0.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
 
     # invalid symbol
     with pytest.raises(OrderError):
-        Order(symbol='', quantity=1, price=10.0, status=OrderStatus.UNFILLED.value)
+        Order(symbol='', quantity=1, price=10.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
 
     # invalid status
     with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=1, price=10.0, status='BADSTATUS')
+        Order(symbol='AAPL', quantity=1, price=10.0, status='BADSTATUS', action=OrderAction.BUY.value)
 
 def test_order_execution_error():
     # Create sample market data
@@ -74,22 +74,22 @@ def test_order_execution_error():
     mock_engine = ExecutionEngine(market_data)
     
     # Attempt to buy with insufficient capital
-    expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value)
+    expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
     with pytest.raises(ExecutionError):
-        mock_engine.execute_order(OrderAction.BUY.value, expensive_order)
+        mock_engine.execute_order(expensive_order)
 
     # Attempt to without owning shares
-    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value)
+    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value)
     with pytest.raises(ExecutionError):
-        mock_engine.execute_order(OrderAction.SELL.value, sell_order)
+        mock_engine.execute_order(sell_order)
 
     # Set up a position for mock engine
-    mock_engine.portfolio.positions['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
+    mock_engine.portfolio['positions']['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
 
     # Attempt to sell more than owned
-    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value)
+    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value)
     with pytest.raises(ExecutionError):
-        mock_engine.execute_order(OrderAction.SELL.value, sell_order)
+        mock_engine.execute_order(sell_order)
     
 
     
