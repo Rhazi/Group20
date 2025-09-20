@@ -74,6 +74,35 @@ class macd(Strategy):  # moving average convergence divergence
             prev = ema
         return v
 
+class BollingerBandsStrategy(Strategy):
+    def __init__(self, window: int = 20, num_std: float = 2.0, qty: int = 100):  # maybe? consider making qty(=100) as configurable later
+
+        self.window = window
+        self.num_std = num_std
+        self.qty = qty
+        self.prices = deque(maxlen=window)  
+
+    def generate_signals(self, tick: MarketDataPoint) -> list:
+        self.prices.append(tick.price)
+        signals = []
+
+        if len(self.prices) >= self.window:
+            ma = sum(self.prices) / self.window
+            std = statistics.pstdev(self.prices)
+
+            upper_band = ma + self.num_std * std
+            lower_band = ma - self.num_std * std
+
+            if tick.price < lower_band:
+                signals.append((OrderAction.BUY.value, tick.symbol, self.qty, tick.price))
+            elif tick.price > upper_band:
+                signals.append((OrderAction.SELL.value, tick.symbol, self.qty, tick.price))
+            else:
+                signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+
+
+        return signals
+        
 #data = pd.read_csv('/Users/simorhazi/Desktop/uchicago/python/market_data.csv')
 #print(data)
 #strategie = macd()
