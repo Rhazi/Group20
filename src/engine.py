@@ -1,5 +1,5 @@
 from strategies import MovingAverageCrossoverStrategy
-from models import Order, OrderStatus, OrderAction, ExecutionError
+from models import Order, OrderStatus, OrderAction, ExecutionError, OrderError
 
 class ExecutionEngine:
     def __init__(self, market_data: list):
@@ -45,7 +45,7 @@ class ExecutionEngine:
                     raise ExecutionError(f"Not enough quantity to sell for {order.symbol}")
             else:
                 raise ExecutionError(f"No position to sell for {order.symbol}")
-
+        
         return order
     
     def run(self):
@@ -53,6 +53,11 @@ class ExecutionEngine:
         signals = self.generate_signals()
         for signal in signals:
             for action, symbol, quantity, price in signal:
-                order = Order(symbol, quantity, price, OrderStatus.UNFILLED)
-                executed_order = self.execute_order(action, order)
-                print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}")
+                try:
+                    order = Order(symbol, quantity, price, OrderStatus.UNFILLED)
+                    executed_order = self.execute_order(action, order)
+                    print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}")
+                except OrderError as e:
+                    print(f"Order Creation Failed: {e}")
+                except ExecutionError as e:
+                    print(f"Order Execution Failed: {e}")
