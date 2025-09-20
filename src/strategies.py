@@ -36,6 +36,7 @@ class macd(Strategy):  # moving average convergence divergence
         self.short_window = short_window
         self.large_window = large_window
         self.macd_window = macd_window
+        self.prev = OrderAction.HOLD.value
         self.prices = []
 
     def generate_signals(self, tick) -> list:
@@ -49,9 +50,17 @@ class macd(Strategy):  # moving average convergence divergence
             signal_diff = [f-s for f,s in zip(self.ema(self.prices, self.short_window), self.ema(self.prices, self.large_window))]
             signal_line = self.ema(signal_diff, self.macd_window)[-1]
             if macd_line > signal_line:
-                signals.append([OrderAction.BUY.value, tick.symbol, 100, tick.price])
+                if self.prev = OrderAction.BUY.value:
+                    self.prev = OrderAction.HOLD.value
+                    signals.append([OrderAction.HOLD.value, tick.symbol, 100, tick.price])
+                else:
+                    signals.append([OrderAction.BUY.value, tick.symbol, 100, tick.price])
             else:
-                signals.append([OrderAction.SELL.value, tick.symbol, 100, tick.price])
+                if self.prev = OrderAction.SELL.value:
+                    self.prev = OrderAction.HOLD.value
+                    signals.append([OrderAction.HOLD.value, tick.symbol, 100, tick.price])
+                else:
+                    signals.append([OrderAction.SELL.value, tick.symbol, 100, tick.price])
 
         return signals
 
