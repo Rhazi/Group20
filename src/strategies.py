@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 import matplotlib.pyplot as plt
-
 from models import MarketDataPoint, OrderAction
 
 class Strategy(ABC):
@@ -17,7 +16,7 @@ class MovingAverageCrossoverStrategy(Strategy):
         self.prices = []
 
     def generate_signals(self, tick) -> list:
-        self.prices.append(tick)
+        self.prices.append(tick.price)
         signals = []
 
         if len(self.prices) >= self.long_window:
@@ -25,9 +24,9 @@ class MovingAverageCrossoverStrategy(Strategy):
             long_ma = sum(self.prices[-self.long_window:]) / self.long_window
 
             if short_ma > long_ma:
-                signals.append((OrderAction.BUY, tick.symbol, 100, tick.price))
+                signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))
             elif short_ma < long_ma:
-                signals.append(('SELL', tick.symbol, 100, tick.price))
+                signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
 
         return signals
 
@@ -40,7 +39,7 @@ class macd(Strategy):  # moving average convergence divergence
         self.prices = []
 
     def generate_signals(self, tick) -> list:
-        self.prices.append(tick)
+        self.prices.append(tick.price)
         signals = []
 
         if len(self.prices) >= self.large_window:
@@ -50,9 +49,9 @@ class macd(Strategy):  # moving average convergence divergence
             signal_diff = [f-s for f,s in zip(self.ema(self.prices, self.short_window), self.ema(self.prices, self.large_window))]
             signal_line = self.ema(signal_diff, self.macd_window)[-1]
             if macd_line > signal_line:
-                signals.append(['BUY', tick.symbol, 100, tick.price])
+                signals.append([OrderAction.BUY.value, tick.symbol, 100, tick.price])
             else:
-                signals.append(['SELL', tick.symbol, 100, tick.price])
+                signals.append([OrderAction.SELL.value, tick.symbol, 100, tick.price])
 
         return signals
 
