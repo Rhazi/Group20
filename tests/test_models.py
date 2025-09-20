@@ -71,25 +71,30 @@ def test_order_execution_error():
     ]
 
     # Initialize execution engine with market data
-    mock_engine = ExecutionEngine(market_data)
-    
+    mock_portfolio = {
+        'capital': 1000.0,
+        'positions': {},
+        'earnings': 0.0,
+    }
+    mock_engine = ExecutionEngine(market_data, {'dummyStrategy': mock_portfolio})
+
     # Attempt to buy with insufficient capital
     expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
     with pytest.raises(ExecutionError):
-        mock_engine.execute_order(expensive_order)
+        mock_engine.execute_order(expensive_order, mock_portfolio)
 
     # Attempt to without owning shares
     sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value)
     with pytest.raises(ExecutionError):
-        mock_engine.execute_order(sell_order)
+        mock_engine.execute_order(sell_order, mock_portfolio)
 
     # Set up a position for mock engine
-    mock_engine.portfolio['positions']['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
+    mock_engine.portfolio['dummyStrategy']['positions']['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
 
     # Attempt to sell more than owned
     sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value)
     with pytest.raises(ExecutionError):
-        mock_engine.execute_order(sell_order)
+        mock_engine.execute_order(sell_order, mock_portfolio)
     
 
     

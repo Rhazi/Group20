@@ -2,49 +2,54 @@ from strategies import MovingAverageCrossoverStrategy
 from models import Order, OrderStatus, OrderAction, ExecutionError, OrderError
 
 class ExecutionEngine:
-    def __init__(self, market_data: list):
+    def __init__(self, market_data: list, strategies: dict):
         self.orders = []
         self.market_data = market_data
-        self.MAStrategy = MovingAverageCrossoverStrategy()
-        self.portfolio = {
-            'capital': 100000.0, # starting capital in USD
-            'positions': {}, # {'AAPL': {'quantity': 0, 'avg_price': 0.0}}
-            'earnings': 0.0,
-        }
+        self.strategies = strategies # key: strategy name, value: strategy instance
+        self.portfolio = {} # key: strategy name, value: portfolio dict
+        self.initalize_portfolio()
+    
+    def initalize_portfolio(self, initial_capital=100000.0):
+        # maintain separate portfolio for each strategy
+        for strategy_name in self.strategies.keys():
+            self.portfolio[strategy_name] = {
+                'capital': initial_capital,
+                'positions': {},
+                'earnings': 0.0,
+            }
 
-    def generate_signals(self):
+    def generate_signals(self, strategy):
         signals = []
-        for tick in self.market_data :
-            signals.append(self.MAStrategy.generate_signals(tick))
+        for tick in self.market_data:
+            signals.append(strategy.generate_signals(tick))
         return signals
 
-    def execute_order(self, order):
+    def execute_order(self, order, portfolio):
         # Assumption: All orders are filled immediately at the given price
         order.status = OrderStatus.FILLED.value
         self.orders.append(order)
 
         # Update portfolio
         if order.action == OrderAction.BUY.value:
-            if self.portfolio['capital'] >= order.price * order.quantity:
-                if order.symbol not in self.portfolio['positions']:
-                    self.portfolio['positions'][order.symbol] = {'quantity': 0, 'avg_price': 0.0}
+            if portfolio['capital'] >= order.price * order.quantity:
+                if order.symbol not in portfolio['positions']:
+                    portfolio['positions'][order.symbol] = {'quantity': 0, 'avg_price': 0.0}
 
-                pos = self.portfolio['positions'][order.symbol]
+                pos = portfolio['positions'][order.symbol]
                 total_cost = pos['avg_price'] * pos['quantity'] + order.price * order.quantity
                 pos['quantity'] += order.quantity
                 pos['avg_price'] = round(total_cost / pos['quantity'], 4)
-                self.portfolio['capital'] -= order.price * order.quantity
+                portfolio['capital'] -= order.price * order.quantity
             else:
                 raise ExecutionError(f"Not enough capital to buy {order.symbol}")
-
         elif order.action == OrderAction.SELL.value:
-            if order.symbol in self.portfolio['positions']:
-                pos = self.portfolio['positions'][order.symbol]
+            if order.symbol in portfolio['positions']:
+                pos = portfolio['positions'][order.symbol]
                 if pos['quantity'] >= order.quantity:
                     pos['quantity'] -= order.quantity
                     earnings = order.price * order.quantity
-                    self.portfolio['capital'] += earnings
-                    self.portfolio['earnings'] += earnings
+                    portfolio['capital'] += earnings
+                    portfolio['earnings'] += earnings
                     if pos['quantity'] == 0:
                         pos['avg_price'] = 0.0
                 else:
@@ -56,15 +61,20 @@ class ExecutionEngine:
     
     def run(self):
         self.orders = []
-        signals = self.generate_signals()
-        for signal in signals:
-            for action, symbol, quantity, price in signal:
-                try:
-                    order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action)
-                    executed_order = self.execute_order(order)
-                    print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
-                    print(f"Portfolio: {self.portfolio}")
-                except OrderError as e:
-                    print(f"Order Creation Failed: {e}")
-                except ExecutionError as e:
-                    print(f"Order Execution Failed: {e}")
+        for strategy_name, strategy in self.strategies.items():
+            print('\n' + '='*40)
+            print(f'RUNNING STRATEGY: {strategy_name.upper()}')
+            print('='*40 + '\n')
+            
+            signals = self.generate_signals(strategy)
+            for signal in signals:
+                for action, symbol, quantity, price in signal:
+                    try:
+                        order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action)
+                        executed_order = self.execute_order(order, self.portfolio[strategy_name])
+                        print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
+                        print(f"Portfolio: {self.portfolio}")
+                    except OrderError as e:
+                        print(f"Order Creation Failed: {e}")
+                    except ExecutionError as e:
+                        print(f"Order Execution Failed: {e}")
