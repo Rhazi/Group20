@@ -53,8 +53,10 @@ class BollingerBandsStrategy(Strategy):
             lower_band = ma - self.num_std * std
 
             if tick.price < lower_band:
-                signals.append(('BUY', tick.symbol, self.qty, tick.price))
+                signals.append((OrderAction.BUY.value, tick.symbol, self.qty, tick.price))
             elif tick.price > upper_band:
-                signals.append(('SELL', tick.symbol, self.qty, tick.price))
+                signals.append((OrderAction.SELL.value, tick.symbol, self.qty, tick.price))
+            else:
+                
 
         return signals
