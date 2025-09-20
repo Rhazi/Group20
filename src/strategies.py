@@ -50,17 +50,17 @@ class macd(Strategy):  # moving average convergence divergence
             signal_diff = [f-s for f,s in zip(self.ema(self.prices, self.short_window), self.ema(self.prices, self.large_window))]
             signal_line = self.ema(signal_diff, self.macd_window)[-1]
             if macd_line > signal_line:
-                if self.prev = OrderAction.BUY.value:
+                if self.prev == OrderAction.BUY.value:
                     self.prev = OrderAction.HOLD.value
-                    signals.append([OrderAction.HOLD.value, tick.symbol, 100, tick.price])
+                    signals.append((OrderAction.HOLD.value, tick.price, 100, tick.price))
                 else:
-                    signals.append([OrderAction.BUY.value, tick.symbol, 100, tick.price])
+                    signals.append((OrderAction.BUY.value, tick.price, 100, tick.price))
             else:
-                if self.prev = OrderAction.SELL.value:
+                if self.prev == OrderAction.SELL.value:
                     self.prev = OrderAction.HOLD.value
-                    signals.append([OrderAction.HOLD.value, tick.symbol, 100, tick.price])
+                    signals.append((OrderAction.HOLD.value, tick.price, 100, tick.price))
                 else:
-                    signals.append([OrderAction.SELL.value, tick.symbol, 100, tick.price])
+                    signals.append((OrderAction.SELL.value, tick.price, 100, tick.price))
 
         return signals
 
@@ -78,12 +78,12 @@ class macd(Strategy):  # moving average convergence divergence
 #print(data)
 #strategie = macd()
 #r=[]
-#data["execution"] = None
+#data["execution"] = [0 for _ in range(data.shape[0])]
 #print(data)
 #for i in range(data.shape[0]):
 #    signal = strategie.generate_signals(data.iloc[i]["price"])
-#    if not signal:signal = [0]
-#    data.loc[i,"execution"]=signal[0]
+#    if not signal:signal = [[0,0,0,0,0]]
+#    data.loc[i,"execution"]=signal[0][4]
 #data["delta"] = data["price"].diff().fillna(0)
 #data["execution"] = data["execution"].shift(1).fillna(0)
 #data["pnl"] = data["delta"] * data["execution"]
