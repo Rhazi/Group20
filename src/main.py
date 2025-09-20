@@ -1,5 +1,5 @@
 from data_loader import load_data
-from strategies import macd, MovingAverageCrossoverStrategy
+from strategies import macd, BollingerBandsStrategy
 from engine import ExecutionEngine
 
 def main():
@@ -9,7 +9,7 @@ def main():
     # 2. inialize strategies
     strategies = {
         'macd': macd(),
-        'ma_crossover': MovingAverageCrossoverStrategy(),
+        'bollingerband': BollingerBandsStrategy(),
     }
 
     # 3. intilialize engine
@@ -20,7 +20,7 @@ def main():
 
     print(engine.portfolio['macd'])
     print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-    print(engine.portfolio['ma_crossover'])
+    print(engine.portfolio['bollingerband'])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 import matplotlib.pyplot as plt
+from models import MarketDataPoint
 from models import OrderAction
+from collections import deque
+import statistics
 
 class Strategy(ABC):
     @abstractmethod
