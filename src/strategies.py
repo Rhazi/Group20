@@ -103,29 +103,3 @@ class BollingerBandsStrategy(Strategy):
 
         return signals
         
-#data = pd.read_csv('/Users/simorhazi/Desktop/uchicago/python/market_data.csv')
-#print(data)
-#strategie = macd()
-#r=[]
-#data["execution"] = [0 for _ in range(data.shape[0])]
-#print(data)
-#for i in range(data.shape[0]):
-#    signal = strategie.generate_signals(data.iloc[i]["price"])
-#    if not signal:signal = [[0,0,0,0,0]]
-#    data.loc[i,"execution"]=signal[0][4]
-#data["delta"] = data["price"].diff().fillna(0)
-#data["execution"] = data["execution"].shift(1).fillna(0)
-#data["pnl"] = data["delta"] * data["execution"]
-#data["cumpnl"] = data["pnl"].cumsum()
-
-#cash = 10
-#final_cash = cash+data["cumpnl"]
-
-#print(final_cash)
-#ticker = "AAPL"
-#plt.figure(figsize = (10,5))
-#plt.plot(data.index, data["cumpnl"])
-#plt.title(f"Cumulative profit and loss of {ticker} with a 1 share per trade trading policy")
-#plt.xlabel("Date")
-#plt.ylabel("Cumulative pnl")
-#plt.show()
