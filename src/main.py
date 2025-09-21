@@ -18,10 +18,15 @@ def main():
     # 4. run engine
     engine.run()
 
-    print(engine.portfolio['macd'])
-    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-    print(engine.portfolio['bollingerband'])
-    print(engine.orders)
+    # 5. print portfolio summary
+    print("\n" + "="*40)
+    print("FINAL PORTFOLIO SUMMARY")
+    print("="*40 + "\n")    
+    for strategy_name, portfolio in engine.portfolio.items():
+        print(f"Strategy: {strategy_name}")
+        print(f"  Capital: {portfolio['capital']:.2f}")
+        print(f"  Positions: {portfolio['positions']}")
+        print(f"  Earnings: {portfolio['earnings']:.2f}\n")
 
 if __name__ == "__main__":
     main()
