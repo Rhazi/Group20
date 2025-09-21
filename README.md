@@ -128,6 +128,7 @@ Embed or view the workflow diagram in the repository to follow the visual flow; 
 
 ## Tests
 Check tests/test_models.py file for the implementation
+
 ![Test result preview](./img/FINM325%20-%20test%20result.png)
 
 ```bash
