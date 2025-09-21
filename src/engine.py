@@ -25,21 +25,23 @@ class ExecutionEngine:
         return signals
 
     def execute_order(self, order, portfolio):
-        # Assumption: All orders are filled immediately at the given price
-        order.status = OrderStatus.FILLED.value
-        self.orders.append(order)
-
         # Update portfolio
         if order.action == OrderAction.BUY.value:
             if portfolio['capital'] >= order.price * order.quantity:
                 if order.symbol not in portfolio['positions']:
                     portfolio['positions'][order.symbol] = {'quantity': 0, 'avg_price': 0.0}
 
+                earnings = order.price * order.quantity
                 pos = portfolio['positions'][order.symbol]
-                total_cost = pos['avg_price'] * pos['quantity'] + order.price * order.quantity
+                total_cost = pos['avg_price'] * pos['quantity'] + earnings
                 pos['quantity'] += order.quantity
                 pos['avg_price'] = round(total_cost / pos['quantity'], 4)
-                portfolio['capital'] -= order.price * order.quantity
+                portfolio['capital'] -= earnings
+                portfolio['earnings'] -= earnings
+
+                # fill order
+                order.status = OrderStatus.FILLED.value
+                self.orders.append(order)
             else:
                 raise ExecutionError(f"Not enough capital to buy {order.symbol}")
         elif order.action == OrderAction.SELL.value:
@@ -52,6 +54,10 @@ class ExecutionEngine:
                     portfolio['earnings'] += earnings
                     if pos['quantity'] == 0:
                         pos['avg_price'] = 0.0
+                    
+                    # fill order
+                    order.status = OrderStatus.FILLED.value
+                    self.orders.append(order)
                 else:
                     raise ExecutionError(f"Not enough quantity to sell for {order.symbol}")
             else:
