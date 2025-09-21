@@ -41,3 +41,6 @@ class Order:
         self.status = status
         self.action = action
 
+    def __repr__(self):
+        return f"Order(symbol={self.symbol}, quantity={self.quantity}, price={self.price}, status={self.status}, action={self.action})"
+

@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-import pandas as pd
-import matplotlib.pyplot as plt
 from models import MarketDataPoint
 from models import OrderAction
 from collections import deque
@@ -10,7 +8,6 @@ class Strategy(ABC):
     @abstractmethod
     def generate_signals(self, tick) -> list:
         pass
-
 
 class MovingAverageCrossoverStrategy(Strategy):
     def __init__(self, short_window: int = 5, long_window: int = 20):

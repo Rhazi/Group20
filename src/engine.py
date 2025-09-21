@@ -1,4 +1,3 @@
-from strategies import MovingAverageCrossoverStrategy
 from models import Order, OrderStatus, OrderAction, ExecutionError, OrderError
 
 class ExecutionEngine:
