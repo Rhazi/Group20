@@ -116,8 +116,8 @@ The engine calls `generate_singals` for each market datapoint and converts retur
 
 We include a visual workflow diagram that explains the typical backtest flow for this project. See `img/FINM325 - Assignment Workflow.pdf` for the diagram.
 
-[![Workflow diagram showing the backtesting process for FINM325 assignment. The diagram illustrates sequential steps: data ingestion, strategy evaluation, order execution, portfolio accounting, and reporting. Arrows connect each step, visually mapping the flow from loading CSV market data, generating buy or sell signals, simulating order fills, updating portfolio positions and cash, to producing performance reports and plots. The environment is a digital workspace focused on quantitative finance. Text in the diagram: FINM325 Assignment Workflow. The tone is educational and methodical.](./img/FINM325 - Assignment Workflow.pdf)](./img/FINM325 - Assignment Workflow.pdf)
 
+![Workflow preview](./img/FINM325 - Assignment Workflow.pdf)
 
 High level steps in the workflow:
 
