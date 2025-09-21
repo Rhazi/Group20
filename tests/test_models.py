@@ -6,7 +6,7 @@ from pathlib import Path
 import csv
 
 FIXTURES = Path(__file__).parent / "fixtures"
-DUMMY_STRATEGY = "dummyStrategy"
+DUMMY_STRATEGY = "DUMMYSTRATEGY"
 BAD_STATUS = "BADSTATUS"
 
 def test_csv_parses_into_frozen_dataclass():

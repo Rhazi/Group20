@@ -9,28 +9,6 @@ class Strategy(ABC):
     def generate_signals(self, tick) -> list:
         pass
 
-class MovingAverageCrossoverStrategy(Strategy):
-    def __init__(self, short_window: int = 5, long_window: int = 20):
-        self.short_window = short_window
-        self.long_window = long_window
-        self.prices = []
-
-    def generate_signals(self, tick) -> list:
-        self.prices.append(tick.price)
-        signals = []
-
-        if len(self.prices) >= self.long_window:
-            short_ma = sum(self.prices[-self.short_window:]) / self.short_window
-            long_ma = sum(self.prices[-self.long_window:]) / self.long_window
-
-            if short_ma > long_ma:
-                signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))
-            elif short_ma < long_ma:
-                signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
-
-        return signals
-
-
 class macd(Strategy):  # moving average convergence divergence
     def __init__(self, short_window: int = 15, large_window: int = 30, macd_window: int = 9):
         self.short_window = short_window
@@ -76,7 +54,6 @@ class macd(Strategy):  # moving average convergence divergence
 
 class BollingerBandsStrategy(Strategy):
     def __init__(self, window: int = 20, num_std: float = 2.0, qty: int = 100):  # maybe? consider making qty(=100) as configurable later
-
         self.window = window
         self.num_std = num_std
         self.qty = qty
@@ -99,7 +76,6 @@ class BollingerBandsStrategy(Strategy):
                 signals.append((OrderAction.SELL.value, tick.symbol, self.qty, tick.price))
             else:
                 signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
-
 
         return signals
         

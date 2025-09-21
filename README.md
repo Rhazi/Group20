@@ -4,16 +4,14 @@ A small, educational backtesting framework developed for FINM325 — designed to
 
 ## Overview
 
-This repository implements a simple backtester with the following responsibilities:
+This repository implements a simple backtester. Current repo files of interest:
 
-- `src/data_loader.py` — loads historical market data (CSV or similar) and yields time-series market events.
-- `src/class.py` — core domain models: Market data points, Orders, Portfolio, and custom Exceptions.
-- `src/strategies.py` — user-configurable strategies. Each strategy should expose a simple interface that the engine can call (e.g., `on_tick` or `generate_signals`).
-- `src/engine.py` — the backtest engine: executes strategy signals against market data, simulates order execution, and updates the portfolio.
-- `src/reporting.py` — produces summary statistics and visualizations (returns performance metrics and generates plots).
-- `src/main.py` — entrypoint script that wires the components together and runs the backtest.
-
-> Note: At the time of writing, most `src/*.py` files are empty except `src/class.py`. The README below assumes common backtester behavior — adjust examples if your project differs.
+- `src/data_loader.py` — loads historical market data (CSV) and converts rows into `MarketDataPoint` objects.
+- `src/models.py` — domain models: `MarketDataPoint`, `Order`, `OrderStatus`, `OrderAction` and custom Exceptions.
+- `src/strategies.py` — strategy implementations (e.g., macd). Strategies expose `generate_signals` or a similar method.
+- `src/engine.py` — execution engine that applies strategy signals to the portfolio and simulates fills.
+- `src/reporting.py` — reporting utilities to compute returns, drawdowns and plot equity curves.
+- `src/main.py` — entrypoint script that wires all components together and runs experiments.
 
 ## Requirements
 
@@ -73,15 +71,15 @@ If you have OHLCV data, modify `src/data_loader.py` to parse and yield the field
 A minimal example (conceptual):
 
 ```python
-from src.data_loader import load_csv
-from src.strategies import MyStrategy
-from src.engine import BacktestEngine
+from src.data_loader import load_data
+from src.strategies import MovingAverageCrossoverStrategy
+from src.engine import ExecutionEngine
 from src.reporting import Reporter
 
-data = load_csv('data/AAPL.csv')
-strategy = MyStrategy()
-engine = BacktestEngine(starting_cash=100000)
-engine.run(data, strategy)
+data = load_data()  # loads `data/market_data.csv` by default
+strategy = MovingAverageCrossoverStrategy()
+engine = ExecutionEngine(data)
+engine.run()
 
 report = Reporter(engine.portfolio)
 report.summary()
@@ -98,29 +96,60 @@ class MyStrategy:
     def __init__(self, params):
         # store params/state
 
-    def on_tick(self, market_data_point):
-        # return action(s) like {'symbol': 'AAPL', 'side': 'buy', 'qty': 10}
-        return None
+    def generate_signals(self, tick):
+        # return signals(s) like (action, symbol, qty, price)
+        return ('BUY', 'AAPL', 100, 145.0)
 ```
 
-The engine calls `on_tick` for each market datapoint and converts returned signals into orders.
+The engine calls `generate_singals` for each market datapoint and converts returned signals into orders.
 
 ## Extending the engine
 
 - Add slippage, commissions, partial fills models to `src/engine.py`.
 - Support portfolio-level risk checks (max position size, margin calls).
-- Add event-based scheduling (entry/exit by time-of-day, trailing stops).
 
 ## Reporting and analysis
 
 `src/reporting.py` should compute common metrics: total return, annualized return, max drawdown, Sharpe ratio, and generate a price/equity curve plot. Use `pandas` and `matplotlib` or `plotly` for visuals.
 
+## Workflow
+
+We include a visual workflow diagram that explains the typical backtest flow for this project. See `img/FINM325 - Assignment Workflow.pdf` for the diagram.
+
+[![Preview of the PDF](./img/FINM325 - Assignment Workflow.pdf)](./img/FINM325 - Assignment Workflow.pdf)
+
+
+High level steps in the workflow:
+
+1. Data ingestion: `src/data_loader.py` reads CSV(s) from `data/` and yields `MarketDataPoint` objects.
+2. Strategy evaluation: `src/strategies.py` receives ticks and returns signals (buy/sell/hold).
+3. Order creation & execution: `src/engine.py` converts signals into `Order` objects and simulates execution (fills, partial fills, slippage — depending on implementation).
+4. Portfolio accounting: the engine updates positions, cash, and computes realized/unrealized P&L.
+5. Reporting: `src/reporting.py` computes performance metrics and produces plots or tables for analysis.
+
+Embed or view the workflow diagram in the repository to follow the visual flow; it is stored in the `img/` folder as a PDF.
+
 ## Tests
+[![Preview of the PDF](./img/FINM325 - test result.png)](./img/FINM325 - test result.png)
+
+To run tests, use `pytest` (recommended) or Python's built-in `unittest`. First, install `pytest`:
+
+```bash
+pip install pytest
+```
+
+Then run all tests at root directory:
+
+```bash
+pytest
+```
+
+Make sure your test files are named with the `test_*.py` pattern.
 
 Add unit tests covering:
-- Strategy signal generation (given synthetic market series)
-- Order execution logic in the engine
-- Portfolio P&L accounting and edge cases (zero cash, negative position)
+- CSV parsing into frozen dataclass
+- Mutable behavior of Order
+- Exception raising and handling
 
 ## Contributing
 
@@ -131,7 +160,3 @@ Add unit tests covering:
 ## Contact
 
 For questions about this repository, ask your course group contributors or instructor. Include the file(s) you modified and a brief description of the expected vs actual behavior.
-
----
-
-If you'd like, I can create a concrete `requirements.txt`, a starter `data/` CSV, and a simple example strategy and `main.py` runner that work end-to-end — tell me which you'd prefer and I will add them.
