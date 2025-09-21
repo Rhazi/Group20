@@ -77,15 +77,14 @@ from src.engine import ExecutionEngine
 from src.reporting import Reporter
 
 data = load_data()  # loads `data/market_data.csv` by default
-strategy = MovingAverageCrossoverStrategy()
-engine = ExecutionEngine(data)
+strategies = {
+   'MA': MovingAverageCrossoverStrategy()
+}
+engine = ExecutionEngine(data,  strategies)
 engine.run()
 
-report = Reporter(engine.portfolio)
-report.summary()
+# run jupyter for repporting after this
 ```
-
-Adjust names to match your actual API.
 
 ## Writing strategies
 
