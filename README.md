@@ -130,8 +130,7 @@ High level steps in the workflow:
 Embed or view the workflow diagram in the repository to follow the visual flow; it is stored in the `img/` folder as a PDF.
 
 ## Tests
-
-[![Preview of the PDF](./img/FINM325 - test result.png)](./img/FINM325 - test result.png)
+![Test result preview](./img/FINM325%20-%20test%20result.png)
 
 ```bash
 pip install pytest
