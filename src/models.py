@@ -25,7 +25,7 @@ class ExecutionError(Exception):
     pass    
 
 class Order:
-    def __init__(self, symbol: str, quantity: float, price: float, status: str, action: str):
+    def __init__(self, symbol: str, quantity: float, price: float, status: str, action: str, strategy: str):
         if quantity <= 0:
             raise OrderError("Quantity must be positive")
         if price <= 0:
@@ -40,7 +40,8 @@ class Order:
         self.price = price
         self.status = status
         self.action = action
+        self.strategy = strategy
 
     def __repr__(self):
-        return f"Order(symbol={self.symbol}, quantity={self.quantity}, price={self.price}, status={self.status}, action={self.action})"
+        return f"Order(symbol={self.symbol}, quantity={self.quantity}, price={self.price}, status={self.status}, action={self.action}, strategy={self.strategy})"
 

@@ -6,6 +6,8 @@ from pathlib import Path
 import csv
 
 FIXTURES = Path(__file__).parent / "fixtures"
+DUMMY_STRATEGY = "dummyStrategy"
+BAD_STATUS = "BADSTATUS"
 
 def test_csv_parses_into_frozen_dataclass():
     test_points = []
@@ -32,7 +34,7 @@ def test_csv_parses_into_frozen_dataclass():
 
 def test_order_mutable_behavior_and_validation():
     # valid order
-    o = Order(symbol='AAPL', quantity=10, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
+    o = Order(symbol='AAPL', quantity=10, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
     assert o.symbol == 'AAPL'
     assert o.quantity == 10
 
@@ -49,19 +51,19 @@ def test_order_mutable_behavior_and_validation():
     # Order validation tests
     # invalid quantity
     with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=0, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
+        Order(symbol='AAPL', quantity=0, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
 
     # invalid price
     with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=1, price=0.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
+        Order(symbol='AAPL', quantity=1, price=0.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
 
     # invalid symbol
     with pytest.raises(OrderError):
-        Order(symbol='', quantity=1, price=10.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
+        Order(symbol='', quantity=1, price=10.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
 
     # invalid status
     with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=1, price=10.0, status='BADSTATUS', action=OrderAction.BUY.value)
+        Order(symbol='AAPL', quantity=1, price=10.0, status=BAD_STATUS, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
 
 def test_order_execution_error():
     # Create sample market data
@@ -76,23 +78,23 @@ def test_order_execution_error():
         'positions': {},
         'earnings': 0.0,
     }
-    mock_engine = ExecutionEngine(market_data, {'dummyStrategy': mock_portfolio})
+    mock_engine = ExecutionEngine(market_data, {DUMMY_STRATEGY: mock_portfolio})
 
     # Attempt to buy with insufficient capital
-    expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value)
+    expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
     with pytest.raises(ExecutionError):
         mock_engine.execute_order(expensive_order, mock_portfolio)
 
     # Attempt to without owning shares
-    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value)
+    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value, strategy=DUMMY_STRATEGY)
     with pytest.raises(ExecutionError):
         mock_engine.execute_order(sell_order, mock_portfolio)
 
     # Set up a position for mock engine
-    mock_engine.portfolio['dummyStrategy']['positions']['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
+    mock_engine.portfolio[DUMMY_STRATEGY]['positions']['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
 
     # Attempt to sell more than owned
-    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value)
+    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value, strategy=DUMMY_STRATEGY)
     with pytest.raises(ExecutionError):
         mock_engine.execute_order(sell_order, mock_portfolio)
     

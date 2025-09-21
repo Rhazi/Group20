@@ -75,7 +75,7 @@ class ExecutionEngine:
             for signal in signals:
                 for action, symbol, quantity, price in signal:
                     try:
-                        order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action)
+                        order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action, strategy_name)
                         executed_order = self.execute_order(order, self.portfolio[strategy_name])
                         # print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
                         # print(f"Portfolio: {self.portfolio}")

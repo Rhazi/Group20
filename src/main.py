@@ -21,7 +21,7 @@ def main():
     print(engine.portfolio['macd'])
     print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
     print(engine.portfolio['bollingerband'])
-    print(engine.orders[0])
+    print(engine.orders)
 
 if __name__ == "__main__":
     main()
