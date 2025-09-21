@@ -54,10 +54,11 @@ class macd(Strategy):  # moving average convergence divergence
 
 class BollingerBandsStrategy(Strategy):
     def __init__(self, window: int = 20, num_std: float = 2.0, qty: int = 100):  # maybe? consider making qty(=100) as configurable later
-        self.window = window
-        self.num_std = num_std
-        self.qty = qty
-        self.prices = deque(maxlen=window)  
+
+        self.__window = window
+        self.__num_std = num_std
+        self.__qty = qty
+        self.__prices = deque(maxlen=window)
 
     def generate_signals(self, tick: MarketDataPoint) -> list:
         self.prices.append(tick.price)
