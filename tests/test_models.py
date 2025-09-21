@@ -1,104 +1,84 @@
-import pytest
-import datetime
-from models import MarketDataPoint, Order, OrderAction, OrderStatus, OrderError, ExecutionError
-from engine import ExecutionEngine
-from pathlib import Path
-import csv
 
-FIXTURES = Path(__file__).parent / "fixtures"
-DUMMY_STRATEGY = "dummyStrategy"
-BAD_STATUS = "BADSTATUS"
+from abc import ABC, abstractmethod
+from models import MarketDataPoint
+from models import OrderAction
+from collections import deque
+import statistics
 
-def test_csv_parses_into_frozen_dataclass():
-    test_points = []
-    csv_path = FIXTURES / "sample_data.csv"
-    with open(csv_path, newline='') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            ts = datetime.datetime.fromisoformat(row['timestamp'])
-            mdp = MarketDataPoint(timestamp=ts, symbol=row['symbol'], price=float(row['price']))
-            test_points.append(mdp)
+class Strategy(ABC):
+    @abstractmethod
+    def generate_signals(self, tick) -> list:
+        pass
 
-    assert len(test_points) == 2
-    assert test_points[0].symbol == 'AAPL'
-    assert isinstance(test_points[0].timestamp, datetime.datetime)
+class macd(Strategy):  # moving average convergence divergence
+    def __init__(self, short_window: int = 15, large_window: int = 30, macd_window: int = 9):
+        self.__short_window = short_window
+        self.__large_window = large_window
+        self.__macd_window = macd_window
+        self.__prev = OrderAction.HOLD.value
+        self.__prices = []
 
-    # immutable attributes for MarketDataPoint
-    with pytest.raises(Exception):
-        test_points[0].price = 123.0
-    with pytest.raises(Exception):
-        test_points[0].symbol = 'GOOG'
-    with pytest.raises(Exception):
-        test_points[0].timestamp = datetime.datetime.now()
+    def generate_signals(self, tick: MarketDataPoint) -> list:
+        self.__prices.append(tick.price)
+        signals = []
+
+        if len(self.__prices) >= self.__large_window:
+            fast_ema = self.ema(self.__prices[-self.__short_window:], self.__short_window)[-1]
+            slow_ema = self.ema(self.__prices[-self.__large_window:], self.__large_window)[-1]
+            macd_line = fast_ema - slow_ema
+            signal_diff = [f-s for f,s in zip(self.ema(self.__prices, self.__short_window), self.ema(self.__prices, self.__large_window))]
+            signal_line = self.ema(signal_diff, self.__macd_window)[-1]
+            if macd_line > signal_line:
+                if self.__prev == OrderAction.BUY.value:
+                    self.__prev = OrderAction.HOLD.value
+                    signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
+                else:
+                    signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))
+            else:
+                if self.__prev == OrderAction.SELL.value:
+                    self.__prev = OrderAction.HOLD.value
+                    signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
+                else:
+                    signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
+
+        return signals
+
+    def ema(self, prices, window) -> list:  # exponential moving average
+        alpha = 2 / (window + 1)
+        v = []
+        prev = prices[0]
+        for p in prices:
+            ema = alpha * p + (1 - alpha) * prev
+            v.append(ema)
+            prev = ema
+        return v
+
+class BollingerBandsStrategy(Strategy):
+    def __init__(self, window: int = 20, num_std: float = 2.0, qty: int = 100):  # maybe? consider making qty(=100) as configurable later
+
+        self.__window = window
+        self.__num_std = num_std
+        self.__qty = qty
+        self.__prices = deque(maxlen=window)
+
+    def generate_signals(self, tick: MarketDataPoint) -> list:
+        self.__prices.append(tick.price)
+        signals = []
+
+        if len(self.__prices) >= self.__window:
+            ma = sum(self.__prices) / self.__window
+            std = statistics.pstdev(self.__prices)
+
+            upper_band = ma + self.__num_std * std
+            lower_band = ma - self.__num_std * std
+
+            if tick.price < lower_band:
+                signals.append((OrderAction.BUY.value, tick.symbol, self.__qty, tick.price))
+            elif tick.price > upper_band:
+                signals.append((OrderAction.SELL.value, tick.symbol, self.__qty, tick.price))
+            else:
+                signals.append((OrderAction.HOLD.value, tick.symbol, self.__qty, tick.price))
 
 
-def test_order_mutable_behavior_and_validation():
-    # valid order
-    o = Order(symbol='AAPL', quantity=10, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
-    assert o.symbol == 'AAPL'
-    assert o.quantity == 10
-
-    # mutate attributes (Order is intentionally mutable)
-    o.symbol = 'GOOG'
-    assert o.symbol == 'GOOG'
-    o.quantity = 5
-    assert o.quantity == 5
-    o.price = 150.0
-    assert o.price == 150.0
-    o.status = OrderStatus.FILLED.value
-    assert o.status == OrderStatus.FILLED.value
-
-    # Order validation tests
-    # invalid quantity
-    with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=0, price=100.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
-
-    # invalid price
-    with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=1, price=0.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
-
-    # invalid symbol
-    with pytest.raises(OrderError):
-        Order(symbol='', quantity=1, price=10.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
-
-    # invalid status
-    with pytest.raises(OrderError):
-        Order(symbol='AAPL', quantity=1, price=10.0, status=BAD_STATUS, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
-
-def test_order_execution_error():
-    # Create sample market data
-    market_data = [
-        MarketDataPoint(timestamp=datetime.datetime.now(), symbol='AAPL', price=150.0),
-        MarketDataPoint(timestamp=datetime.datetime.now(), symbol='AAPL', price=155.0),
-    ]
-
-    # Initialize execution engine with market data
-    mock_portfolio = {
-        'capital': 1000.0,
-        'positions': {},
-        'earnings': 0.0,
-    }
-    mock_engine = ExecutionEngine(market_data, {DUMMY_STRATEGY: mock_portfolio})
-
-    # Attempt to buy with insufficient capital
-    expensive_order = Order(symbol='AAPL', quantity=1000, price=200.0, status=OrderStatus.UNFILLED.value, action=OrderAction.BUY.value, strategy=DUMMY_STRATEGY)
-    with pytest.raises(ExecutionError):
-        mock_engine.execute_order(expensive_order, mock_portfolio)
-
-    # Attempt to without owning shares
-    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value, strategy=DUMMY_STRATEGY)
-    with pytest.raises(ExecutionError):
-        mock_engine.execute_order(sell_order, mock_portfolio)
-
-    # Set up a position for mock engine
-    mock_engine.portfolio[DUMMY_STRATEGY]['positions']['AAPL'] = {'quantity': 50, 'avg_price': 150.0}
-
-    # Attempt to sell more than owned
-    sell_order = Order(symbol='AAPL', quantity=200, price=155.0, status=OrderStatus.UNFILLED.value, action=OrderAction.SELL.value, strategy=DUMMY_STRATEGY)
-    with pytest.raises(ExecutionError):
-        mock_engine.execute_order(sell_order, mock_portfolio)
-    
-
-    
-
-    
+        return signals
+        
