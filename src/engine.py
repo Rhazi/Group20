@@ -43,7 +43,7 @@ class ExecutionEngine:
                 order.status = OrderStatus.FILLED.value
                 self.orders.append(order)
             else:
-                raise ExecutionError(f"Not enough capital to buy {order.symbol}")
+                raise ExecutionError(f"Not enough capital to buy {order.symbol}. Current capital: {portfolio['capital']}, Required: {order.price * order.quantity}")
         elif order.action == OrderAction.SELL.value:
             if order.symbol in portfolio['positions']:
                 pos = portfolio['positions'][order.symbol]
@@ -59,9 +59,9 @@ class ExecutionEngine:
                     order.status = OrderStatus.FILLED.value
                     self.orders.append(order)
                 else:
-                    raise ExecutionError(f"Not enough quantity to sell for {order.symbol}")
+                    raise ExecutionError(f"Not enough quantity to sell for {order.symbol}. Requested: {order.quantity}, Available: {pos['quantity']}")
             else:
-                raise ExecutionError(f"No position to sell for {order.symbol}")
+                raise ExecutionError(f"No position to sell for {order.symbol}. Current positions: {portfolio['positions']}")
         
         return order
     
