@@ -114,7 +114,7 @@ The engine calls `generate_singals` for each market datapoint and converts retur
 
 ## Workflow
 
-![Workflow preview](img/FINM325-Assignment-Workflow.png)
+![Workflow preview](./img/FINM325-Assignment-Workflow.png)
 
 High level steps in the workflow:
 
