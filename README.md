@@ -113,11 +113,7 @@ The engine calls `generate_singals` for each market datapoint and converts retur
 `src/reporting.py` should compute common metrics: total return, annualized return, max drawdown, Sharpe ratio, and generate a price/equity curve plot. Use `pandas` and `matplotlib` or `plotly` for visuals.
 
 ## Workflow
-
-We include a visual workflow diagram that explains the typical backtest flow for this project. See `img/FINM325 - Assignment Workflow.pdf` for the diagram.
-
-
-![Workflow preview](./img/FINM325 - Assignment Workflow.pdf)
+![Workflow preview](./img/FINM325-Assignment-Workflow.png)
 
 High level steps in the workflow:
 
