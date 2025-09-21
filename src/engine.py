@@ -25,9 +25,29 @@ class ExecutionEngine:
     
     def run(self):
         self.orders = []
+<<<<<<< Updated upstream
         signals = self.generate_signals()
         for signal in signals:
             for action, symbol, quantity, price in signal:
                 order = Order(symbol, quantity, price, 'UNFILLED')
                 executed_order = self.execute_order(order)
                 print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}")
+=======
+        for strategy_name, strategy in self.strategies.items():
+            print('\n' + '='*40)
+            print(f'RUNNING STRATEGY: {strategy_name.upper()}')
+            print('='*40 + '\n')
+            
+            signals = self.generate_signals(strategy)
+            for signal in signals:
+                for action, symbol, quantity, price in signal:
+                    try:
+                        order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action, strategy_name)
+                        executed_order = self.execute_order(order, self.portfolio[strategy_name])
+                        # print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
+                        # print(f"Portfolio: {self.portfolio}")
+                    except OrderError as e:
+                        print(f"Order Creation Failed: {e}")
+                    except ExecutionError as e:
+                        print(f"Order Execution Failed: {e}")
+>>>>>>> Stashed changes
