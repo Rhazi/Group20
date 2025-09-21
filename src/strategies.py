@@ -11,31 +11,31 @@ class Strategy(ABC):
 
 class macd(Strategy):  # moving average convergence divergence
     def __init__(self, short_window: int = 15, large_window: int = 30, macd_window: int = 9):
-        self.short_window = short_window
-        self.large_window = large_window
-        self.macd_window = macd_window
-        self.prev = OrderAction.HOLD.value
-        self.prices = []
+        self.__short_window = short_window
+        self.__large_window = large_window
+        self.__macd_window = macd_window
+        self.__prev = OrderAction.HOLD.value
+        self.__prices = []
 
     def generate_signals(self, tick) -> list:
-        self.prices.append(tick.price)
+        self.__prices.append(tick.price)
         signals = []
 
-        if len(self.prices) >= self.large_window:
-            fast_ema = self.ema(self.prices[-self.short_window:], self.short_window)[-1]
-            slow_ema = self.ema(self.prices[-self.large_window:], self.large_window)[-1]
+        if len(self.__prices) >= self.__large_window:
+            fast_ema = self.ema(self.__prices[-self.__short_window:], self.__short_window)[-1]
+            slow_ema = self.ema(self.__prices[-self.__large_window:], self.__large_window)[-1]
             macd_line = fast_ema - slow_ema
-            signal_diff = [f-s for f,s in zip(self.ema(self.prices, self.short_window), self.ema(self.prices, self.large_window))]
-            signal_line = self.ema(signal_diff, self.macd_window)[-1]
+            signal_diff = [f-s for f,s in zip(self.ema(self.__prices, self.__short_window), self.ema(self.__prices, self.__large_window))]
+            signal_line = self.ema(signal_diff, self.__macd_window)[-1]
             if macd_line > signal_line:
-                if self.prev == OrderAction.BUY.value:
-                    self.prev = OrderAction.HOLD.value
+                if self.__prev == OrderAction.BUY.value:
+                    self.__prev = OrderAction.HOLD.value
                     signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
                 else:
                     signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))
             else:
-                if self.prev == OrderAction.SELL.value:
-                    self.prev = OrderAction.HOLD.value
+                if self.__prev == OrderAction.SELL.value:
+                    self.__prev = OrderAction.HOLD.value
                     signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
                 else:
                     signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
