@@ -61,22 +61,22 @@ class BollingerBandsStrategy(Strategy):
         self.__prices = deque(maxlen=window)
 
     def generate_signals(self, tick: MarketDataPoint) -> list:
-        self.prices.append(tick.price)
+        self.__prices.append(tick.price)
         signals = []
 
-        if len(self.prices) >= self.window:
-            ma = sum(self.prices) / self.window
-            std = statistics.pstdev(self.prices)
+        if len(self.__prices) >= self.__window:
+            ma = sum(self.__prices) / self.__window
+            std = statistics.pstdev(self.__prices)
 
-            upper_band = ma + self.num_std * std
-            lower_band = ma - self.num_std * std
+            upper_band = ma + self.__num_std * std
+            lower_band = ma - self.__num_std * std
 
             if tick.price < lower_band:
-                signals.append((OrderAction.BUY.value, tick.symbol, self.qty, tick.price))
+                signals.append((OrderAction.BUY.value, tick.symbol, self.__qty, tick.price))
             elif tick.price > upper_band:
-                signals.append((OrderAction.SELL.value, tick.symbol, self.qty, tick.price))
+                signals.append((OrderAction.SELL.value, tick.symbol, self.__qty, tick.price))
             else:
-                signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+                signals.append((OrderAction.HOLD.value, tick.symbol, self.__qty, tick.price))
 
         return signals
         
