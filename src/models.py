@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import datetime
+from typing import List
 
 @dataclass(frozen=True)
 class MarketDataPoint:
@@ -50,3 +51,7 @@ class Order:
     def __repr__(self):
         return f"Order(symbol={self.symbol}, quantity={self.quantity}, price={self.price}, status={self.status}, action={self.action}, strategy={self.strategy})"
 
+@dataclass
+class TickerBook:
+    orders: List[Order]
+    market_data: List[MarketDataPoint]

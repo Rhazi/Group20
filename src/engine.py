@@ -1,14 +1,17 @@
-from models import Order, OrderStatus, OrderAction, ExecutionError, OrderError
+from typing import Dict, List
+from models import MarketDataPoint, Order, OrderStatus, OrderAction, ExecutionError, OrderError, TickerBook
+from strategies import Strategy
+
 
 class ExecutionEngine:
-    def __init__(self, market_data: list, strategies: dict):
-        self.orders = []
-        self.market_data = market_data
-        self.strategies = strategies # key: strategy name, value: strategy instance
-        self.portfolio = {} # key: strategy name, value: portfolio dict
+    def __init__(self, market_data: Dict[str, List[MarketDataPoint]], strategies: dict):
+        self.ticker_book: Dict[str, TickerBook] = {}
+        self.strategies: Dict[str, Strategy] = strategies
+        self.portfolio: Dict[str, dict] = {} # key: strategy name, value: portfolio dict
+        self.update_ticker_book(market_data)
         self.initalize_portfolio()
     
-    def initalize_portfolio(self, initial_capital=100000.0):
+    def initalize_portfolio(self, initial_capital=1000000.0):
         # maintain separate portfolio for each strategy
         for strategy_name in self.strategies.keys():
             self.portfolio[strategy_name] = {
@@ -16,6 +19,13 @@ class ExecutionEngine:
                 'positions': {},
                 'earnings': 0.0,
             }
+
+    def update_ticker_book(self, market_data: Dict[str, List[MarketDataPoint]]):
+        for symbol, data in market_data.items():
+            if symbol not in self.ticker_book:
+                self.ticker_book[symbol] = TickerBook(orders=[], market_data=data)
+            else:
+                self.ticker_book[symbol].market_data.extend(data)
 
     def generate_signals(self, strategy):
         signals = []
@@ -40,6 +50,9 @@ class ExecutionEngine:
 
                 # fill order
                 order.status = OrderStatus.FILLED.value
+
+                # update ticker book
+                self.ticker_book[order.symbol].orders.append(order)
                 self.orders.append(order)
             else:
                 raise ExecutionError(f"Not enough capital to buy {order.symbol}. Current capital: {portfolio['capital']}, Required: {order.price * order.quantity}")
@@ -56,6 +69,9 @@ class ExecutionEngine:
                     
                     # fill order
                     order.status = OrderStatus.FILLED.value
+
+                    # update ticker book
+                    self.ticker_book[order.symbol].orders.append(order)
                     self.orders.append(order)
                 else:
                     raise ExecutionError(f"Not enough quantity to sell for {order.symbol}. Requested: {order.quantity}, Available: {pos['quantity']}")

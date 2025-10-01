@@ -19,7 +19,7 @@ class MAStrategy(Strategy):  # moving average crossover
     def update_historical_data(self, tick: MarketDataPoint):
         new_row = pd.DataFrame([{
             'timestamp': tick.timestamp,
-            'price': tick.price,
+            'price': tick.adj_close,
             'symbol': tick.symbol,
             'volume': tick.volume
         }])
@@ -40,17 +40,14 @@ class MAStrategy(Strategy):  # moving average crossover
             latest_data = self.__historical_data.iloc[-1]
 
             # determine quantity
-            ADV = self.__historical_data['volume'].mean()
+            Adv = self.__historical_data['volume'].mean()
             MA_diff = latest_data['MA_short'] - latest_data['MA_long']
-            
-
+            qty = int(min(Adv * 0.01, self.alpha * (abs(MA_diff)) / latest_data['MA_long']))
 
             if MA_diff > 0: # MA_short crosses above MA_long, Buy signal
-                signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))   
+                signals.append((OrderAction.BUY.value, tick.symbol, 1, tick.price))   
             elif MA_diff < 0: # MA_short crosses below MA_long, Sell signal
-                signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
-            else:
-                signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
+                signals.append((OrderAction.SELL.value, tick.symbol, 1, tick.price))
 
         return signals        
 

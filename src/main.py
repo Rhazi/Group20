@@ -1,15 +1,21 @@
 from data_loader import load_data
-from strategies import macd, BollingerBandsStrategy
+from strategies import macd, BollingerBandsStrategy, MAStrategy
 from engine import ExecutionEngine
+from PriceLoader import PriceLoader
+
 
 def main():
     # 1. load data
-    data_points = load_data() # tick data points
+    # data_points = load_data() # tick data points
+    
+    price_loader = PriceLoader()
+    data_points = price_loader.load_data() # tick data points
 
     # 2. inialize strategies
     strategies = {
-        'macd': macd(),
-        'bollingerband': BollingerBandsStrategy(),
+        # 'macd': macd(),
+        # 'bollingerband': BollingerBandsStrategy(),
+        'MA': MAStrategy()
     }
 
     # 3. intilialize engine

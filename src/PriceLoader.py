@@ -6,7 +6,13 @@ from constants import *
 
 class PriceLoader:
     def __init__(self):
-        pass
+        print('Initializing PriceLoader...')
+        self.tickers = self.scrape_tickers()
+
+    def scrape_tickers(self):
+        url = "https://datahub.io/core/s-and-p-500-companies/r/0.csv"
+        tickers = pd.read_csv(url)["Symbol"].tolist()
+        return tickers
 
     def download_price(self, ticker:str, start_date, end_date, batch_size = 150):
         print("\n" + "="*80)
@@ -29,47 +35,54 @@ class PriceLoader:
                 dfs.append(df_batch)
         print("Download complete for", ticker, "...!")
 
-        if not dfs:
-            raise RuntimeError(f"No data downloaded for {ticker} between {start_date} and {end_date}")
-        
-        df = pd.concat(dfs)
-        if isinstance(df.columns, pd.MultiIndex):
-                df.columns = [col[0] for col in df.columns]
+        df = pd.DataFrame()
+        if dfs:        
+            df = pd.concat(dfs)
+            if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = [col[0] for col in df.columns]
 
-        if 'Adj Close' in df.columns:
-            df = df[['Adj Close', 'Close', 'High', 'Low', 'Open', 'Volume']].rename(columns={'Adj Close': 'adj_close', 'Close': 'close', 
-                                                                                             'High': 'high', 'Low': 'low', 'Open': 'open',
-                                                                                             'Volume': 'volume'})
+            if 'Adj Close' in df.columns:
+                df = df[['Adj Close', 'Close', 'High', 'Low', 'Open', 'Volume']].rename(columns={'Adj Close': 'adj_close', 'Close': 'close', 
+                                                                                                'High': 'high', 'Low': 'low', 'Open': 'open',
+                                                                                                'Volume': 'volume'})
+            else:
+                # fall back to Close (less ideal but robust)
+                df = df[['Close', 'High', 'Low', 'Open', 'Volume']].rename(columns={'Close': 'close', 
+                                                                                    'High': 'high', 'Low': 'low', 'Open': 'open',
+                                                                                    'Volume': 'volume'})
+
+            df = df[~df.index.duplicated(keep='first')]
+            df.drop('Ticker', axis=1, inplace=True, errors='ignore')
+            df['symbol'] = ticker
+
+            df = df.rename_axis('timestamp')
+            df.index = pd.to_datetime(df.index)
+            df.reset_index(inplace=True)
+            df = df.sort_index()
         else:
-            # fall back to Close (less ideal but robust)
-            df = df[['Close', 'High', 'Low', 'Open', 'Volume']].rename(columns={'Close': 'close', 
-                                                                                'High': 'high', 'Low': 'low', 'Open': 'open',
-                                                                                'Volume': 'volume'})
-
-        df = df[~df.index.duplicated(keep='first')]
-        df.drop('Ticker', axis=1, inplace=True, errors='ignore')
-        df['symbol'] = ticker
-
-        df = df.rename_axis('timestamp')
-        df.index = pd.to_datetime(df.index)
-        df.reset_index(inplace=True)
-        df = df.sort_index()
+            print(f"No data found for {ticker} in the given date range.")
 
         return df
 
-    def load_data(self, ticker: str, start_date = "2005-01-01",  end_date="2025-01-01") -> list[MarketDataPoint]:
-        data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-        fn = f"price_{ticker.lower()}.parquet"
-        data_path = os.path.join(data_dir, fn)
-        if not os.path.exists(data_path):
-            self.download_price(ticker, start_date=start_date, end_date=end_date).to_parquet(data_path, index=False)
-        
-        df = pd.read_parquet(data_path)
-        market_data_points = [
-            MarketDataPoint(row['timestamp'], row['symbol'], row['price'], row['volume'])
-            for _, row in df.iterrows()
-        ]
-        return market_data_points
+    def load_data(self, start_date = "2005-01-01",  end_date="2025-01-01") -> list[MarketDataPoint]:
+        market_data_dict = {}
+        for ticker in self.tickers:
+            fn = f"price_{ticker.lower()}.parquet"
+            data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+            data_path = os.path.join(data_dir, fn)
+            if not os.path.exists(data_path):
+                self.download_price(ticker, start_date=start_date, end_date=end_date).to_parquet(data_path, index=False)
+            
+            df = pd.read_parquet(data_path)
+            market_data_points = [
+                MarketDataPoint(row['timestamp'], row['symbol'], row['adj_close'], 
+                                row['close'], row['high'], row['low'], row['open'],
+                                row['volume'])
+                for _, row in df.iterrows()
+            ]
+            market_data_dict[ticker] = market_data_points
+
+        return market_data_dict
         
 if __name__ == "__main__":
     loader = PriceLoader()
@@ -77,11 +90,13 @@ if __name__ == "__main__":
     start_date = "2005-01-01"
     end_date = "2025-01-01"
 
-    price_spy_df = loader.download_price(SPY, start_date=start_date, end_date=end_date)
-    # price_voo_df = loader.download_price(VOO, start_date=start_date, end_date=end_date)
-    # price_ivv_df = loader.download_price(IVV, start_date=start_date, end_date=end_date)
+    for ticker in loader.tickers:
+        dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+        parquet_name = f"price_{ticker.lower()}.parquet"
+        fp = os.path.join(dir, parquet_name)
+        if not os.path.exists(fp):
+            price_spy_df = loader.download_price(ticker, start_date=start_date, end_date=end_date)
+            if not price_spy_df.empty:
+                price_spy_df.to_parquet(fp, index=False)
 
-    price_spy_df.to_parquet("data/price_spy.parquet", index=False)
-    # price_voo_df.to_csv("data/price_voo.parquet", index=False)
-    # price_ivv_df.to_csv("data/price_ivv.parquet", index=False)
     
