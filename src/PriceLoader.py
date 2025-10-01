@@ -35,10 +35,10 @@ class PriceLoader:
                 df.columns = [col[0] for col in df.columns]
 
         if 'Adj Close' in df.columns:
-            df = df[['Adj Close']].rename(columns={'Adj Close': 'adj_close'})
+            df = df[['Adj Close', 'Volume']].rename(columns={'Adj Close': 'adj_close', 'Volume': 'volume'})
         else:
             # fall back to Close (less ideal but robust)
-            df = df[['Close']].rename(columns={'Close': 'adj_close'})
+            df = df[['Close', 'Volume']].rename(columns={'Close': 'adj_close', 'Volume': 'volume'})
 
         df = df[~df.index.duplicated(keep='first')]
         df.drop('Ticker', axis=1, inplace=True, errors='ignore')
