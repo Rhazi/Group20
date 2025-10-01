@@ -40,14 +40,14 @@ class MAStrategy(Strategy):  # moving average crossover
             latest_data = self.__historical_data.iloc[-1]
 
             # determine quantity
-            Adv = self.__historical_data['volume'].mean()
+            # Adv = self.__historical_data['volume'].mean()
             MA_diff = latest_data['MA_short'] - latest_data['MA_long']
-            qty = int(min(Adv * 0.01, self.alpha * (abs(MA_diff)) / latest_data['MA_long']))
+            # qty = int(min(Adv * 0.01, self.alpha * (abs(MA_diff)) / latest_data['MA_long']))
 
             if MA_diff > 0: # MA_short crosses above MA_long, Buy signal
-                signals.append((OrderAction.BUY.value, tick.symbol, 1, tick.price))   
+                signals.append((OrderAction.BUY.value, latest_data['symbol'], 1, latest_data['price']))   
             elif MA_diff < 0: # MA_short crosses below MA_long, Sell signal
-                signals.append((OrderAction.SELL.value, tick.symbol, 1, tick.price))
+                signals.append((OrderAction.SELL.value, latest_data['symbol'], 1, latest_data['price']))
 
         return signals        
 

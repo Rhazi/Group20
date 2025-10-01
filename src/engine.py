@@ -29,8 +29,9 @@ class ExecutionEngine:
 
     def generate_signals(self, strategy):
         signals = []
-        for tick in self.market_data:
-            signals.append(strategy.generate_signals(tick))
+        for _, ticker_book in self.ticker_book.items():
+            for tick in ticker_book.market_data:
+                signals.append(strategy.generate_signals(tick))
         return signals
 
     def execute_order(self, order, portfolio):

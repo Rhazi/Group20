@@ -82,6 +82,8 @@ class PriceLoader:
             ]
             market_data_dict[ticker] = market_data_points
 
+            
+        # market_data_dict  = dict(list(market_data_dict.items())[:5])
         return market_data_dict
         
 if __name__ == "__main__":
