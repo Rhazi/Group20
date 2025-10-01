@@ -6,7 +6,12 @@ import datetime
 class MarketDataPoint:
     timestamp: datetime.datetime
     symbol: str
-    price: float
+    adj_close: float
+    close: float
+    high: float
+    low: float
+    open: float
+    volume: float
 
 class OrderStatus(Enum):
     UNFILLED = "UNFILLED"

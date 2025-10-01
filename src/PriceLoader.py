@@ -1,5 +1,7 @@
 import yfinance as yf
 import pandas as pd
+import os
+from models import MarketDataPoint
 from constants import *
 
 class PriceLoader:
@@ -35,10 +37,14 @@ class PriceLoader:
                 df.columns = [col[0] for col in df.columns]
 
         if 'Adj Close' in df.columns:
-            df = df[['Adj Close', 'Volume']].rename(columns={'Adj Close': 'adj_close', 'Volume': 'volume'})
+            df = df[['Adj Close', 'Close', 'High', 'Low', 'Open', 'Volume']].rename(columns={'Adj Close': 'adj_close', 'Close': 'close', 
+                                                                                             'High': 'high', 'Low': 'low', 'Open': 'open',
+                                                                                             'Volume': 'volume'})
         else:
             # fall back to Close (less ideal but robust)
-            df = df[['Close', 'Volume']].rename(columns={'Close': 'adj_close', 'Volume': 'volume'})
+            df = df[['Close', 'High', 'Low', 'Open', 'Volume']].rename(columns={'Close': 'close', 
+                                                                                'High': 'high', 'Low': 'low', 'Open': 'open',
+                                                                                'Volume': 'volume'})
 
         df = df[~df.index.duplicated(keep='first')]
         df.drop('Ticker', axis=1, inplace=True, errors='ignore')
@@ -51,9 +57,20 @@ class PriceLoader:
 
         return df
 
-    def get_price(self, item_id):
-        return self.price_data.get(item_id, None)
-
+    def load_data(self, ticker: str, start_date = "2005-01-01",  end_date="2025-01-01") -> list[MarketDataPoint]:
+        data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+        fn = f"price_{ticker.lower()}.parquet"
+        data_path = os.path.join(data_dir, fn)
+        if not os.path.exists(data_path):
+            self.download_price(ticker, start_date=start_date, end_date=end_date).to_parquet(data_path, index=False)
+        
+        df = pd.read_parquet(data_path)
+        market_data_points = [
+            MarketDataPoint(row['timestamp'], row['symbol'], row['price'], row['volume'])
+            for _, row in df.iterrows()
+        ]
+        return market_data_points
+        
 if __name__ == "__main__":
     loader = PriceLoader()
 

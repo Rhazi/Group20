@@ -3,11 +3,56 @@ from models import MarketDataPoint
 from models import OrderAction
 from collections import deque
 import statistics
+import pandas as pd
 
 class Strategy(ABC):
     @abstractmethod
     def generate_signals(self, tick) -> list:
         pass
+
+class MAStrategy(Strategy):  # moving average crossover
+    def __init__(self, short_window: int = 20, long_window: int = 50):  # maybe? consider making qty(=100) as configurable later
+        self.__short_window = short_window
+        self.__long_window = long_window
+        self.__historical_data = pd.DataFrame(columns=['timestamp', 'price, symbol', 'volume'])
+
+    def update_historical_data(self, tick: MarketDataPoint):
+        new_row = pd.DataFrame([{
+            'timestamp': tick.timestamp,
+            'price': tick.price,
+            'symbol': tick.symbol,
+            'volume': tick.volume
+        }])
+        self.__historical_data = pd.concat([self.__historical_data, new_row], ignore_index=True)
+        if len(self.__historical_data) > self.__long_window:
+            self.__historical_data = self.__historical_data.iloc[-self.__long_window:]
+
+    def generate_signals(self, tick: MarketDataPoint) -> list:
+        self.update_historical_data(tick)
+        signals = []
+
+        if len(self.__historical_data) >= self.__long_window:
+            # update moving averages
+            self.__historical_data['MA_short'] = self.__historical_data['price'].rolling(window=self.__short_window).mean()
+            self.__historical_data['MA_long'] = self.__historical_data['price'].rolling(window=self.__long_window).mean()
+
+            # generate signals
+            latest_data = self.__historical_data.iloc[-1]
+
+            # determine quantity
+            ADV = self.__historical_data['volume'].mean()
+            MA_diff = latest_data['MA_short'] - latest_data['MA_long']
+            
+
+
+            if MA_diff > 0: # MA_short crosses above MA_long, Buy signal
+                signals.append((OrderAction.BUY.value, tick.symbol, 100, tick.price))   
+            elif MA_diff < 0: # MA_short crosses below MA_long, Sell signal
+                signals.append((OrderAction.SELL.value, tick.symbol, 100, tick.price))
+            else:
+                signals.append((OrderAction.HOLD.value, tick.symbol, 100, tick.price))
+
+        return signals        
 
 class macd(Strategy):  # moving average convergence divergence
     def __init__(self, short_window: int = 15, large_window: int = 30, macd_window: int = 9):
