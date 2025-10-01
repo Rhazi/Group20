@@ -64,7 +64,7 @@ if __name__ == "__main__":
     # price_voo_df = loader.download_price(VOO, start_date=start_date, end_date=end_date)
     # price_ivv_df = loader.download_price(IVV, start_date=start_date, end_date=end_date)
 
-    price_spy_df.to_csv("data/price_spy.parquet", index=False)
+    price_spy_df.to_parquet("data/price_spy.parquet", index=False)
     # price_voo_df.to_csv("data/price_voo.parquet", index=False)
     # price_ivv_df.to_csv("data/price_ivv.parquet", index=False)
     
