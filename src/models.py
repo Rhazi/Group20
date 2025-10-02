@@ -31,7 +31,7 @@ class ExecutionError(Exception):
     pass    
 
 class Order:
-    def __init__(self, symbol: str, quantity: float, price: float, status: str, action: str, strategy: str):
+    def __init__(self, timestamp: datetime, symbol: str, quantity: float, price: float, status: str, action: str, strategy: str):
         if quantity <= 0:
             raise OrderError("Quantity must be positive")
         if price <= 0:
@@ -41,6 +41,7 @@ class Order:
         if status not in [ os.value for os in OrderStatus ]:
             raise OrderError("Invalid order status")
 
+        self.timestamp = timestamp
         self.symbol = symbol
         self.quantity = quantity
         self.price = price

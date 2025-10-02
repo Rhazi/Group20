@@ -1,3 +1,4 @@
+from collections import defaultdict
 import yfinance as yf
 import pandas as pd
 import os
@@ -65,7 +66,7 @@ class PriceLoader:
         return df
 
     def load_data(self, start_date = "2005-01-01",  end_date="2025-01-01") -> list[MarketDataPoint]:
-        market_data_dict = {}
+        market_data_dict = defaultdict(list)
         for ticker in self.tickers:
             fn = f"price_{ticker.lower()}.parquet"
             data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
@@ -74,16 +75,12 @@ class PriceLoader:
                 self.download_price(ticker, start_date=start_date, end_date=end_date).to_parquet(data_path, index=False)
             
             df = pd.read_parquet(data_path)
-            market_data_points = [
-                MarketDataPoint(row['timestamp'], row['symbol'], row['adj_close'], 
-                                row['close'], row['high'], row['low'], row['open'],
-                                row['volume'])
-                for _, row in df.iterrows()
-            ]
-            market_data_dict[ticker] = market_data_points
-
+            # update market data dict based on timestamp
+            for _, row in df.iterrows():
+                market_data_dict[row['timestamp']].append(MarketDataPoint(row['timestamp'], row['symbol'], row['adj_close'], 
+                                                            row['close'], row['high'], row['low'], row['open'],
+                                                            row['volume']))
             
-        # market_data_dict  = dict(list(market_data_dict.items())[:5])
         return market_data_dict
         
 if __name__ == "__main__":

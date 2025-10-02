@@ -1,11 +1,12 @@
+from datetime import datetime
 from typing import Dict, List
 from models import MarketDataPoint, Order, OrderStatus, OrderAction, ExecutionError, OrderError, TickerBook
 from strategies import Strategy
 
 
 class ExecutionEngine:
-    def __init__(self, market_data: Dict[str, List[MarketDataPoint]], strategies: dict):
-        self.ticker_book: Dict[str, TickerBook] = {}
+    def __init__(self, market_data: Dict[any, List[MarketDataPoint]], strategies: dict):
+        self.ticker_book: Dict[any, TickerBook] = {} # key: timestamp, value: TickerBook
         self.strategies: Dict[str, Strategy] = strategies
         self.portfolio: Dict[str, dict] = {} # key: strategy name, value: portfolio dict
         self.update_ticker_book(market_data)
@@ -21,16 +22,18 @@ class ExecutionEngine:
             }
 
     def update_ticker_book(self, market_data: Dict[str, List[MarketDataPoint]]):
-        for symbol, data in market_data.items():
-            if symbol not in self.ticker_book:
-                self.ticker_book[symbol] = TickerBook(orders=[], market_data=data)
-            else:
-                self.ticker_book[symbol].market_data.extend(data)
+        for timestamp, data_points in market_data.items():
+            for data_point in data_points:
+                if timestamp not in self.ticker_book:
+                    self.ticker_book[timestamp] = TickerBook(orders=[], market_data=[])
+                self.ticker_book[timestamp].market_data.append(data_point)
 
     def generate_signals(self, strategy):
         signals = []
-        for _, ticker_book in self.ticker_book.items():
-            for tick in ticker_book.market_data:
+        print(self.ticker_book.keys())
+        for t in sorted(self.ticker_book.keys()):
+            tick_list = self.ticker_book[t].market_data
+            for tick in tick_list:
                 signals.append(strategy.generate_signals(tick))
         return signals
 
@@ -53,7 +56,7 @@ class ExecutionEngine:
                 order.status = OrderStatus.FILLED.value
 
                 # update ticker book
-                self.ticker_book[order.symbol].orders.append(order)
+                self.ticker_book[order.timestamp].orders.append(order)
                 self.orders.append(order)
             else:
                 raise ExecutionError(f"Not enough capital to buy {order.symbol}. Current capital: {portfolio['capital']}, Required: {order.price * order.quantity}")
@@ -72,7 +75,7 @@ class ExecutionEngine:
                     order.status = OrderStatus.FILLED.value
 
                     # update ticker book
-                    self.ticker_book[order.symbol].orders.append(order)
+                    self.ticker_book[order.timestamp].orders.append(order)
                     self.orders.append(order)
                 else:
                     raise ExecutionError(f"Not enough quantity to sell for {order.symbol}. Requested: {order.quantity}, Available: {pos['quantity']}")
@@ -90,9 +93,9 @@ class ExecutionEngine:
             
             signals = self.generate_signals(strategy)
             for signal in signals:
-                for action, symbol, quantity, price in signal:
+                for t, action, symbol, quantity, price in signal:
                     try:
-                        order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action, strategy_name)
+                        order = Order(t, symbol, quantity, price, OrderStatus.UNFILLED.value, action, strategy_name)
                         executed_order = self.execute_order(order, self.portfolio[strategy_name])
                         # print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
                         # print(f"Portfolio: {self.portfolio}")

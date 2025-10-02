@@ -80,9 +80,9 @@ class MAStrategy(Strategy):  # moving average crossover
             # qty = int(min(Adv * 0.01, self.alpha * (abs(MA_diff)) / latest_data['MA_long']))
 
             if MA_diff > 0: # MA_short crosses above MA_long, Buy signal
-                signals.append((OrderAction.BUY.value, latest_data['symbol'], 1, latest_data['price']))   
+                signals.append((tick.timestamp, OrderAction.BUY.value, latest_data['symbol'], 1, latest_data['price']))   
             elif MA_diff < 0: # MA_short crosses below MA_long, Sell signal
-                signals.append((OrderAction.SELL.value, latest_data['symbol'], 1, latest_data['price']))
+                signals.append((tick.timestamp, OrderAction.SELL.value, latest_data['symbol'], 1, latest_data['price']))
 
         return signals        
 
