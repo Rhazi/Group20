@@ -1,14 +1,18 @@
-from models import Order, OrderStatus, OrderAction, ExecutionError, OrderError
+from datetime import datetime
+from typing import Dict, List
+from models import MarketDataPoint, Order, OrderStatus, OrderAction, ExecutionError, OrderError, TickerBook
+from strategies import Strategy
+
 
 class ExecutionEngine:
-    def __init__(self, market_data: list, strategies: dict):
-        self.orders = []
-        self.market_data = market_data
-        self.strategies = strategies # key: strategy name, value: strategy instance
-        self.portfolio = {} # key: strategy name, value: portfolio dict
+    def __init__(self, market_data: Dict[any, List[MarketDataPoint]], strategies: dict):
+        self.ticker_book: Dict[any, TickerBook] = {} # key: timestamp, value: TickerBook
+        self.strategies: Dict[str, Strategy] = strategies
+        self.portfolio: Dict[str, dict] = {} # key: strategy name, value: portfolio dict
+        self.update_ticker_book(market_data)
         self.initalize_portfolio()
     
-    def initalize_portfolio(self, initial_capital=100000.0):
+    def initalize_portfolio(self, initial_capital=1000000.0):
         # maintain separate portfolio for each strategy
         for strategy_name in self.strategies.keys():
             self.portfolio[strategy_name] = {
@@ -17,10 +21,19 @@ class ExecutionEngine:
                 'earnings': 0.0,
             }
 
+    def update_ticker_book(self, market_data: Dict[str, List[MarketDataPoint]]):
+        for timestamp, data_points in market_data.items():
+            for data_point in data_points:
+                if timestamp not in self.ticker_book:
+                    self.ticker_book[timestamp] = TickerBook(orders=[], market_data=[])
+                self.ticker_book[timestamp].market_data.append(data_point)
+
     def generate_signals(self, strategy):
         signals = []
-        for tick in self.market_data:
-            signals.append(strategy.generate_signals(tick))
+        for t in sorted(self.ticker_book.keys()):
+            tick_list = self.ticker_book[t].market_data
+            for tick in tick_list:
+                signals.append(strategy.generate_signals(tick))
         return signals
 
     def execute_order(self, order, portfolio):
@@ -40,6 +53,9 @@ class ExecutionEngine:
 
                 # fill order
                 order.status = OrderStatus.FILLED.value
+
+                # update ticker book
+                self.ticker_book[order.timestamp].orders.append(order)
                 self.orders.append(order)
             else:
                 raise ExecutionError(f"Not enough capital to buy {order.symbol}. Current capital: {portfolio['capital']}, Required: {order.price * order.quantity}")
@@ -56,6 +72,9 @@ class ExecutionEngine:
                     
                     # fill order
                     order.status = OrderStatus.FILLED.value
+
+                    # update ticker book
+                    self.ticker_book[order.timestamp].orders.append(order)
                     self.orders.append(order)
                 else:
                     raise ExecutionError(f"Not enough quantity to sell for {order.symbol}. Requested: {order.quantity}, Available: {pos['quantity']}")
@@ -73,9 +92,9 @@ class ExecutionEngine:
             
             signals = self.generate_signals(strategy)
             for signal in signals:
-                for action, symbol, quantity, price in signal:
+                for t, action, symbol, quantity, price in signal:
                     try:
-                        order = Order(symbol, quantity, price, OrderStatus.UNFILLED.value, action, strategy_name)
+                        order = Order(t, symbol, quantity, price, OrderStatus.UNFILLED.value, action, strategy_name)
                         executed_order = self.execute_order(order, self.portfolio[strategy_name])
                         # print(f"Executed Order: {executed_order.symbol}, {executed_order.quantity}, {executed_order.price}, {executed_order.status}, {executed_order.action}")
                         # print(f"Portfolio: {self.portfolio}")

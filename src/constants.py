@@ -1,0 +1,4 @@
+SPY = "SPY"
+SP500_FUTURES = "ES=F"
+IVV = "IVV"
+VOO = "VOO"
