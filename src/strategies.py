@@ -102,6 +102,119 @@ class BollingerBandsStrategy(Strategy):
 
 
         return signals
+
+### added on Oct 2nd
+class MACD(Strategy):
+    def __init__(self, short_window: int = 12, long_window: int = 26, signal_window: int = 9, qty: int = 1):
+        self.short_window = short_window
+        self.long_window = long_window
+        self.signal_window = signal_window
+        self.qty = qty
+        self.prices = deque(maxlen = self.long_window)
+        self.prev_action = OrderAction.HOLD.value             # to check cross over 
+        
+        # to calculate signal, using macd
+        self.macd_history = deque(maxlen=self.signal_window)  # Signal line 
+        self.fast_ema_prev = None
+        self.slow_ema_prev = None
+        self.signal_ema_prev = None
+
+        
+    def generate_signals(self, tick):
+        self.prices.append(tick.price)
+        signals = []
+
+        if len(self.prices) >= self.long_window:
+            # MACD line, using EMA of price 
+            # decide alpha : smoothing weight, typically set as '2'
+            alpha_fast = 2 / (self.short_window + 1)
+            alpha_slow = 2 / (self.long_window + 1)
+            price = tick.price
+
+            # calculate moving average and MACD line as definition 
+            self.fast_ema_prev = alpha_fast * price + (1 - alpha_fast) * (self.fast_ema_prev or price)
+            self.slow_ema_prev = alpha_slow * price + (1 - alpha_slow) * (self.slow_ema_prev or price)
+            # save in macd_history to calculate signal line
+            macd_line = self.fast_ema_prev - self.slow_ema_prev
+            self.macd_history.append(macd_line)
+
+            # EMA of Signal Line
+            # decide alpha : smoothing weight typically set as '2'
+            alpha_signal = 2 / (self.signal_window + 1)
+            # calculate moving average and signal line as defintion
+            self.signal_ema_prev = alpha_signal * macd_line + (1 - alpha_signal) * (self.signal_ema_prev or macd_line)
+
+            # select signals 
+            if macd_line > self.signal_ema_prev:
+                if self.prev_action != OrderAction.BUY.value:  # signal must came from neutral status
+                    signals.append((OrderAction.BUY.value, tick.symbol, self.qty, tick.price))
+                    self.prev_action = OrderAction.BUY.value
+                else:
+                    signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+            else:
+                if self.prev_action != OrderAction.SELL.value: # signal must came from neutral status
+                    signals.append((OrderAction.SELL.value, tick.symbol, self.qty, tick.price))
+                    self.prev_action = OrderAction.SELL.value
+                else:
+                    signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+
+        return signals
+
+
+## ---------------------------------------------------------------------------------------------------------------------
+class RSI(Strategy):
+    def __init__(self, period: int = 14, oversold: int = 30, overbought: int = 70, qty: int = 1):
+        self.period = period
+        self.oversold = oversold
+        self.overbought = overbought
+        self.qty = qty
+        self.prices = []
+        self.prev_action = OrderAction.HOLD.value
+
+    def generate_signals(self, tick: MarketDataPoint) -> list:
+        self.prices.append(tick.price)
+        signals = []
+
+        if len(self.prices) > self.period:
+            delta = [self.prices[i] - self.prices[i-1] for i in range(1, len(self.prices))]
+            ups = [d if d > 0 else 0 for d in delta]
+            downs = [-d if d < 0 else 0 for d in delta]
+
+            roll_up = self.ewm(ups, self.period)
+            roll_down = self.ewm(downs, self.period)
+            rs = [u / d if d != 0 else 0 for u, d in zip(roll_up, roll_down)]
+            rsi = [100 - (100 / (1 + r)) for r in rs]
+
+            current_rsi = rsi[-1]
+
+            if current_rsi < self.oversold:
+                if self.prev_action != OrderAction.BUY.value:
+                    signals.append((OrderAction.BUY.value, tick.symbol, self.qty, tick.price))
+                    self.prev_action = OrderAction.BUY.value
+                else:
+                    signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+            elif current_rsi > self.overbought:
+                if self.prev_action != OrderAction.SELL.value:
+                    signals.append((OrderAction.SELL.value, tick.symbol, self.qty, tick.price))
+                    self.prev_action = OrderAction.SELL.value
+                else:
+                    signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+            else:
+                signals.append((OrderAction.HOLD.value, tick.symbol, self.qty, tick.price))
+
+        return signals
+
+    @staticmethod
+    def ewm(values, period):
+        alpha = 1 / period
+        out = []
+        prev = values[0]
+        for v in values:
+            val = alpha * v + (1 - alpha) * prev
+            out.append(val)
+            prev = val
+        return out
+
         
 #data = pd.read_csv('/Users/simorhazi/Desktop/uchicago/python/market_data.csv')
 #print(data)
