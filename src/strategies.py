@@ -25,8 +25,8 @@ class Volatility(Strategy):
         long_threshold = self.__prior_high + self.__k * self.__atr
         short_threshold = self.__prior_low - self.__k * self.__atr
         
-        self.__prior_high=tick.__high
-        self.__prior_low=tick.__low
+        self.__prior_high=tick.high
+        self.__prior_low=tick.low
 
         # max capital at risk per trade
         max_risk = self.__equity * self.__risk_pct
