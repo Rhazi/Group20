@@ -10,6 +10,41 @@ class Strategy(ABC):
     def generate_signals(self, tick) -> list:
         pass
 
+class Volatility(Strategy):
+    def __init__(self, k:float =1, prior_high:float = 0, prior_low:float = 0, atr:float = 2, equity:float = 10000, risk_pct:float = 0.01):
+        self.__k=k
+        self.__prior_high=prior_high
+        self.__prior_low=prior_low
+        self.__atr=atr
+        self.__equity=equity
+        self.__risk_pct=risk_pct
+        
+    def generate_signals(self, tick) -> list:
+        signals = []
+        
+        long_threshold = self.__prior_high + self.__k * self.__atr
+        short_threshold = self.__prior_low - self.__k * self.__atr
+        
+        self.__prior_high=tick.__high
+        self.__prior_low=tick.__low
+
+        # max capital at risk per trade
+        max_risk = self.__equity * self.__risk_pct
+        per_share_risk = self.__atr
+        quantity = int(max_risk // per_share_risk)
+
+        # check breakout conditions
+        if tick.price >= long_threshold and quantity > 0:
+            signals.append((OrderAction.BUY.value, tick.symbol, quantity, tick.price))
+        
+        elif tick.price <= short_threshold and quantity > 0:
+            signals.append((OrderAction.SELL.value, tick.symbol, quantity, tick.price))
+
+        else:
+            signals.append((OrderAction.HOLD.value, tick.symbol, quantity, tick.price))
+
+        return signals
+
 class MAStrategy(Strategy):  # moving average crossover
     def __init__(self, short_window: int = 20, long_window: int = 50):  # maybe? consider making qty(=100) as configurable later
         self.__short_window = short_window
