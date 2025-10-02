@@ -30,7 +30,6 @@ class ExecutionEngine:
 
     def generate_signals(self, strategy):
         signals = []
-        print(self.ticker_book.keys())
         for t in sorted(self.ticker_book.keys()):
             tick_list = self.ticker_book[t].market_data
             for tick in tick_list:
