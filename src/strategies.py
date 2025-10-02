@@ -35,13 +35,13 @@ class Volatility(Strategy):
 
         # check breakout conditions
         if tick.price >= long_threshold and quantity > 0:
-            signals.append((OrderAction.BUY.value, tick.symbol, quantity, tick.price))
+            signals.append((OrderAction.BUY.value, tick.symbol, 1, tick.price))
         
         elif tick.price <= short_threshold and quantity > 0:
-            signals.append((OrderAction.SELL.value, tick.symbol, quantity, tick.price))
+            signals.append((OrderAction.SELL.value, tick.symbol, 1, tick.price))
 
         else:
-            signals.append((OrderAction.HOLD.value, tick.symbol, quantity, tick.price))
+            signals.append((OrderAction.HOLD.value, tick.symbol, 1, tick.price))
 
         return signals
 
