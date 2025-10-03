@@ -1,5 +1,5 @@
 from data_loader import load_data
-from strategies import macd, BollingerBandsStrategy, MAStrategy
+from strategies import macd, BollingerBandsStrategy, MAStrategy, Volatility, MACD, RSI, LongOnlyOnce
 from engine import ExecutionEngine
 from PriceLoader import PriceLoader
 
