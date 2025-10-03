@@ -23,7 +23,7 @@ class LongOnlyOnce(Strategy):
                 signals.append((tick.timestamp, OrderAction.BUY.value, tick.symbol, quantity, tick.close))
         else:
             signals.append((tick.timestamp, OrderAction.HOLD.value, tick.symbol, quantity, tick.close))
-        #last_day = True unwind on last day?
+        #last_day = False unwind on last day?
         #if tick.symbol not in self.__hasSold and last_day:
         #    signals.append((tick.timestamp, OrderAction.SELL.value, tick.symbol, quantity, tick.open))
         return signals
@@ -87,11 +87,12 @@ class MAStrategy(Strategy):  # moving average crossover
 
         if len(self.__historical_data) >= self.__long_window:
             # update moving averages
-            self.__historical_data['MA_short'] = self.__historical_data['price'].rolling(window=self.__short_window).mean()
-            self.__historical_data['MA_long'] = self.__historical_data['price'].rolling(window=self.__long_window).mean()
+            currSymbolHisto = self.__historical_data[self.__historical_data['symbol'] == tick.symbol]
+            currSymbolHisto['MA_short'] = self.__historical_data['price'].rolling(window=self.__short_window).mean()
+            currSymbolHisto['MA_long'] = self.__historical_data['price'].rolling(window=self.__long_window).mean()
 
             # generate signals
-            latest_data = self.__historical_data.iloc[-1]
+            latest_data = currSymbolHisto.iloc[-1]
 
             # determine quantity
             # Adv = self.__historical_data['volume'].mean()
