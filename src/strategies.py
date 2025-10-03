@@ -91,28 +91,31 @@ class macd(Strategy):  # moving average convergence divergence
         self.__short_window = short_window
         self.__large_window = large_window
         self.__macd_window = macd_window
-        self.__prev = OrderAction.HOLD.value
-        self.__prices = []
+        self.__prev = {}
+        self.__prices = defaultdict(list)
 
     def generate_signals(self, tick) -> list:
-        self.__prices.append(tick.close)
+        self.__prices[tick.symbol].append(tick.close)
+        if tick.symbol not in self.__prev:
+            self.__prev[tick.symbol] = OrderAction.HOLD.value
+
         signals = []
 
-        if len(self.__prices) >= self.__large_window:
-            fast_ema = self.ema(self.__prices[-self.__short_window:], self.__short_window)[-1]
-            slow_ema = self.ema(self.__prices[-self.__large_window:], self.__large_window)[-1]
+        if len(self.__prices[tick.symbol]) >= self.__large_window:
+            fast_ema = self.ema(self.__prices[tick.symbol][-self.__short_window:], self.__short_window)[-1]
+            slow_ema = self.ema(self.__prices[tick.symbol][-self.__large_window:], self.__large_window)[-1]
             macd_line = fast_ema - slow_ema
-            signal_diff = [f-s for f,s in zip(self.ema(self.__prices, self.__short_window), self.ema(self.__prices, self.__large_window))]
+            signal_diff = [f-s for f,s in zip(self.ema(self.__prices[tick.symbol], self.__short_window), self.ema(self.__prices[tick.symbol], self.__large_window))]
             signal_line = self.ema(signal_diff, self.__macd_window)[-1]
             if macd_line > signal_line:
-                if self.__prev == OrderAction.BUY.value:
-                    self.__prev = OrderAction.HOLD.value
+                if self.__prev[tick.symbol] == OrderAction.BUY.value:
+                    self.__prev[tick.symbol] = OrderAction.HOLD.value
                     signals.append((tick.timestamp, OrderAction.HOLD.value, tick.symbol, 100, tick.close))
                 else:
                     signals.append((tick.timestamp, OrderAction.BUY.value, tick.symbol, 100, tick.close))
             else:
-                if self.__prev == OrderAction.SELL.value:
-                    self.__prev = OrderAction.HOLD.value
+                if self.__prev[tick.symbol] == OrderAction.SELL.value:
+                    self.__prev[tick.symbol] = OrderAction.HOLD.value
                     signals.append((tick.timestamp, OrderAction.HOLD.value, tick.symbol, 100, tick.close))
                 else:
                     signals.append((tick.timestamp, OrderAction.SELL.value, tick.symbol, 100, tick.close))
@@ -139,6 +142,7 @@ class BollingerBandsStrategy(Strategy):
 
     def generate_signals(self, tick: MarketDataPoint) -> list:
         self.__prices.append(tick.close)
+
         signals = []
 
         if len(self.__prices) >= self.__window:
@@ -164,20 +168,29 @@ class MACD(Strategy):
         self.__long_window = long_window
         self.__signal_window = signal_window
         self.__qty = qty
-        self.__prices = deque(maxlen=self.__long_window)
-        self.__prev_action = OrderAction.HOLD.value  # to check cross over
+        self.__prices = defaultdict(deque)
+        self.__prev_action = {}  # to check cross over
 
         # to calculate signal, using macd
-        self.__macd_history = deque(maxlen=self.__signal_window)  # Signal line
-        self.__fast_ema_prev = None
-        self.__slow_ema_prev = None
-        self.__signal_ema_prev = None
+        self.__macd_history = defaultdict(deque)  # Signal line
+        self.__fast_ema_prev = {}
+        self.__slow_ema_prev = {}
+        self.__signal_ema_prev = {}
 
     def generate_signals(self, tick):
-        self.__prices.append(tick.close)
+        self.__prices[tick.symbol].append(tick.close)
+        if tick.symbol not in self.__prev_action:
+            self.__prev_action[tick.symbol] = OrderAction.HOLD.value
+        if tick.symbol not in self.__fast_ema_prev:
+            self.__fast_ema_prev[tick.symbol] = None
+        if tick.symbol not in self.__slow_ema_prev:
+            self.__slow_ema_prev[tick.symbol] = None
+        if tick.symbol not in self.__signal_ema_prev:
+            self.__signal_ema_prev[tick.symbol] = None
+
         signals = []
 
-        if len(self.__prices) >= self.__long_window:
+        if len(self.__prices[tick.symbol]) >= self.__long_window:
             # MACD line, using EMA of price
             # decide alpha : smoothing weight, typically set as '2'
             alpha_fast = 2 / (self.__short_window + 1)
@@ -185,29 +198,29 @@ class MACD(Strategy):
             price = tick.close
 
             # calculate moving average and MACD line as definition
-            self.__fast_ema_prev = alpha_fast * price + (1 - alpha_fast) * (self.__fast_ema_prev or price)
-            self.__slow_ema_prev = alpha_slow * price + (1 - alpha_slow) * (self.__slow_ema_prev or price)
+            self.__fast_ema_prev[tick.symbol] = alpha_fast * price + (1 - alpha_fast) * (self.__fast_ema_prev[tick.symbol] or price)
+            self.__slow_ema_prev[tick.symbol] = alpha_slow * price + (1 - alpha_slow) * (self.__slow_ema_prev[tick.symbol] or price)
             # save in macd_history to calculate signal line
-            macd_line = self.__fast_ema_prev - self.__slow_ema_prev
-            self.__macd_history.append(macd_line)
+            macd_line = self.__fast_ema_prev[tick.symbol] - self.__slow_ema_prev[tick.symbol]
+            self.__macd_history[tick.symbol].append(macd_line)
 
             # EMA of Signal Line
             # decide alpha : smoothing weight typically set as '2'
             alpha_signal = 2 / (self.__signal_window + 1)
             # calculate moving average and signal line as defintion
-            self.__signal_ema_prev = alpha_signal * macd_line + (1 - alpha_signal) * (self.__signal_ema_prev or macd_line)
+            self.__signal_ema_prev[tick.symbol] = alpha_signal * macd_line + (1 - alpha_signal) * (self.__signal_ema_prev[tick.symbol] or macd_line)
 
             # select signals
-            if macd_line > self.__signal_ema_prev:
-                if self.__prev_action != OrderAction.BUY.value:  # signal must came from neutral status
+            if macd_line > self.__signal_ema_prev[tick.symbol]:
+                if self.__prev_action[tick.symbol] != OrderAction.BUY.value:  # signal must came from neutral status
                     signals.append((tick.timestamp, OrderAction.BUY.value, tick.symbol, self.__qty, tick.close))
-                    self.__prev_action = OrderAction.BUY.value
+                    self.__prev_action[tick.symbol] = OrderAction.BUY.value
                 else:
                     signals.append((tick.timestamp, OrderAction.HOLD.value, tick.symbol, self.__qty, tick.close))
             else:
-                if self.__prev_action != OrderAction.SELL.value:  # signal must came from neutral status
+                if self.__prev_action[tick.symbol] != OrderAction.SELL.value:  # signal must came from neutral status
                     signals.append((tick.timestamp, OrderAction.SELL.value, tick.symbol, self.__qty, tick.close))
-                    self.__prev_action = OrderAction.SELL.value
+                    self.__prev_action[tick.symbol] = OrderAction.SELL.value
                 else:
                     signals.append((tick.timestamp, OrderAction.HOLD.value, tick.symbol, self.__qty, tick.close))
 
@@ -267,6 +280,4 @@ class RSI(Strategy):
             out.append(val)
             prev = val
         return out
-        
-
         
