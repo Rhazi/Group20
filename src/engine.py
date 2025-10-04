@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Dict, List
 from models import MarketDataPoint, Order, OrderStatus, OrderAction, ExecutionError, OrderError, TickerBook
 from strategies import Strategy
@@ -56,7 +55,6 @@ class ExecutionEngine:
 
                 # update ticker book
                 self.ticker_book[order.timestamp].orders.append(order)
-                self.orders.append(order)
             else:
                 raise ExecutionError(f"Not enough capital to buy {order.symbol}. Current capital: {portfolio['capital']}, Required: {order.price * order.quantity}")
         elif order.action == OrderAction.SELL.value:
@@ -75,11 +73,10 @@ class ExecutionEngine:
 
                     # update ticker book
                     self.ticker_book[order.timestamp].orders.append(order)
-                    self.orders.append(order)
                 else:
                     raise ExecutionError(f"Not enough quantity to sell for {order.symbol}. Requested: {order.quantity}, Available: {pos['quantity']}")
             else:
-                raise ExecutionError(f"No position to sell for {order.symbol}. Current positions: {portfolio['positions']}")
+                raise ExecutionError(f"No position to sell for {order.symbol}.")
         
         return order
     

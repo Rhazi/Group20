@@ -80,7 +80,8 @@ class PriceLoader:
                 market_data_dict[row['timestamp']].append(MarketDataPoint(row['timestamp'], row['symbol'], row['adj_close'], 
                                                             row['close'], row['high'], row['low'], row['open'],
                                                             row['volume']))
-            
+        
+        # market_data_dict = dict(sorted(market_data_dict.items())[:50])
         return market_data_dict
         
 if __name__ == "__main__":
