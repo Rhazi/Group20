@@ -6,11 +6,13 @@ A small, educational backtesting framework developed for FINM325 — designed to
 
 This repository implements a simple backtester. Current repo files of interest:
 
-- `src/data_loader.py` — loads historical market data (CSV) and converts rows into `MarketDataPoint` objects.
+- `src/PriceLoader.py` — download all tickers for S&P 500 and save them into parquet.
 - `src/models.py` — domain models: `MarketDataPoint`, `Order`, `OrderStatus`, `OrderAction` and custom Exceptions.
 - `src/strategies.py` — strategy implementations (e.g., macd). Strategies expose `generate_signals` or a similar method.
+- `src/BenchmarkStrategy.py` — contains benchmark or baseline strategies for comparison, such as `LongOnlyOnce` (simple buy-and-hold). Useful for evaluating your custom strategies against a passive approach.
 - `src/engine.py` — execution engine that applies strategy signals to the portfolio and simulates fills.
-- `src/reporting.py` — reporting utilities to compute returns, drawdowns and plot equity curves.
+- `notebooks/StrategyComparison.ipynb` — Jupyter notebook for comparing multiple strategies on the same dataset. It loads price data, runs each strategy, and visualizes performance metrics (returns, drawdowns, Sharpe ratio) side-by-side. Useful for analyzing which strategy performs best under different market conditions.
+- `src/StrategyComparison.py` — reporting utilities to compute returns and compare performances for each strategy.
 - `src/main.py` — entrypoint script that wires all components together and runs experiments.
 
 ## Requirements
@@ -45,9 +47,28 @@ The backtester expects historical data in a timeseries CSV with at least the fol
 
 - `timestamp` — ISO-8601 datetime string (e.g. `2020-01-01T09:30:00`)
 - `symbol` — ticker symbol (e.g. `AAPL`)
-- `price` — float price (close or mid-price depending on your source)
+- `adj_close` — float price (close or mid-price depending on your source)
+- `open` — float, opening price for the period
+- `close` — float, closing price for the period
+- `high` — float, highest price for the period
+- `low` — float, lowest price for the period
+- `vol` — integer or float, trading volume for the period
+**Updated CSV format example:**
 
-Example CSV:
+The recommended CSV format for full OHLCV data is:
+
+```csv
+timestamp,symbol,open,high,low,close,adj_close,vol
+2020-01-02T09:30:00,AAPL,299.80,300.50,299.60,300.35,300.35,120000
+2020-01-02T09:31:00,AAPL,300.35,301.20,300.10,301.00,301.00,95000
+```
+
+- `timestamp`: ISO-8601 datetime string
+- `symbol`: ticker symbol
+- `open`, `high`, `low`, `close`, `adj_close`: float prices
+- `vol`: integer or float volume
+
+If you only have price data, use:
 
 ```csv
 timestamp,symbol,price
@@ -55,11 +76,9 @@ timestamp,symbol,price
 2020-01-02T09:31:00,AAPL,301.00
 ```
 
-If you have OHLCV data, modify `src/data_loader.py` to parse and yield the fields your strategies need.
-
 ## How to run a backtest
 
-1. Prepare data in `data/your_symbol.csv`.
+1. Prepare data in `data/price_symbol.parquet`.
 2. Implement or pick a strategy in `src/strategies.py`.
 3. Use `src/main.py` to run the backtest. A typical `main.py` does:
    - load data
@@ -71,12 +90,15 @@ If you have OHLCV data, modify `src/data_loader.py` to parse and yield the field
 A minimal example (conceptual):
 
 ```python
-from src.data_loader import load_data
+from src.PriceLoader import PriceLoader
+
 from src.strategies import MovingAverageCrossoverStrategy
 from src.engine import ExecutionEngine
 from src.reporting import Reporter
 
-data = load_data()  # loads `data/market_data.csv` by default
+price_loader = PriceLoader()
+data_points = price_loader.load_data() # tick data points
+
 strategies = {
    'MA': MovingAverageCrossoverStrategy()
 }
@@ -85,6 +107,69 @@ engine.run()
 
 # run jupyter for repporting after this
 ```
+
+### Running the repository example (`src/main.py`)
+
+The repository contains a runnable example entrypoint at `src/main.py`. It uses a `PriceLoader` utility to find and load price files, wires a set of strategies, runs the `ExecutionEngine`, and prints final portfolio summaries per strategy.
+
+From the repository root you can run:
+
+```bash
+python src/main.py
+```
+
+Notes:
+- `src/main.py` imports local modules without `src.` package qualification. Launching `jupyter` or `python` from the repo root ensures the imports resolve. If you get ModuleNotFoundError when running cells, set PYTHONPATH to the repo root or add an import shim in the notebook (see Notebooks section).
+- The example expects a `PriceLoader` implementation (file `PriceLoader.py`) and strategy implementations in `src/strategies.py` or a top-level `strategies.py` depending on your branch. Check `src/main.py` imports — typical names used in this repo are: `macd`, `BollingerBandsStrategy`, `MAStrategy`, `Volatility`, `MACD`, `RSI`.
+
+## Key project components (focused)
+
+Below are short descriptions and usage notes for the files you asked me to highlight.
+
+- `PriceLoader.py` (or `src/PriceLoader.py`)
+    - Responsibility: discover and load CSV/parquet price files from `data/` and return a time-series that the engine consumes.
+    - Typical API: `PriceLoader().load_data()` returns a list of market datapoints or a pandas DataFrame depending on implementation.
+    - Example usage (used by `src/main.py`):
+        ```python
+        from PriceLoader import PriceLoader
+        price_loader = PriceLoader()
+        data_points = price_loader.load_data()
+        ```
+
+- `src/strategies.py` (or top-level `strategies.py` depending on branch)
+    - Contains strategy implementations and helper signal generators.
+    - Common pattern: each strategy exposes a `generate_signals(tick)` method that returns a list of signals of the form `(action, symbol, qty, price)` where `action` is one of `OrderAction.BUY`/`SELL` (or their `.value` strings in some implementations).
+    - Example strategies present in this project (watch for exact function/class names in your branch): `macd`, `BollingerBandsStrategy`, `MAStrategy`, `Volatility`, `MACD`, `RSI`.
+    - To add a new strategy: implement the class and return signals compatible with the engine's executor.
+
+- `BenchmarkStrategy.py` (or `src/BenchmarkStrategy.py`)
+    - Contains benchmark or baseline strategies used for comparison. A common helper is `LongOnlyOnce` which implements a simple buy-and-hold or single-entry long strategy.
+    - Example usage in `src/main.py`:
+        ```python
+        from BenchmarkStrategy import LongOnlyOnce
+        strategies['benchmark'] = LongOnlyOnce()
+        ```
+
+- `StrategyComparison.ipynb` (notebook)
+    - Location: look for `notebooks/StrategyComparison.ipynb` or `src/StrategyComparison.ipynb` depending on branch.
+    - Purpose: run multiple strategies over the same dataset and produce comparative performance charts and tables.
+    - Notebook imports often use plain module names (e.g., `from data_loader import load_data`). To run the notebook successfully:
+        - Launch Jupyter from the repository root so Python can import local modules by filename.
+        - Or add this one-time shim at the top of the notebook before other imports:
+            ```python
+            import sys, os
+            sys.path.insert(0, os.path.abspath(''))
+            ```
+        - Ensure the kernel you select has the same environment where your dependencies (pandas, numpy, matplotlib, pytest) are installed.
+
+## Notebooks and kernel notes
+
+If you can't open or run the notebook:
+
+- Make sure you start Jupyter from the repository root directory. That ensures the notebook's local imports find the correct files (e.g., `PriceLoader.py` and `strategies.py`).
+- If you prefer not to rely on the working directory, modify the notebook to import from the `src` package (e.g., `from src.data_loader import load_data`) and install the package in editable mode (`pip install -e .`) or add the repo root to `PYTHONPATH`.
+- If the notebook fails to display (JSON parse errors), open it in VS Code (raw view) to inspect JSON validity. I inspected `src/performance.ipynb` earlier and it appears to be valid JSON.
+
 
 ## Writing strategies
 
@@ -113,17 +198,22 @@ The engine calls `generate_singals` for each market datapoint and converts retur
 
 ## Workflow
 
-![Workflow preview](./img/FINM325-Assignment-Workflow.png)
+The workflow now reflects the updated logic in `main.py`:
 
-High level steps in the workflow:
+```mermaid
+flowchart TD
+    A[Load price data<br>PriceLoader.load_data()] --> B[Initialize strategies<br>e.g. MovingAverageCrossoverStrategy()]
+    B --> C[Create ExecutionEngine<br>with data & strategies]
+    C --> D[Run engine<br>engine.run()]
+    D --> E[Generate report<br>Reporter or notebook]
+```
 
-1. Data ingestion: `src/data_loader.py` reads CSV(s) from `data/` and yields `MarketDataPoint` objects.
-2. Strategy evaluation: `src/strategies.py` receives ticks and returns signals (buy/sell/hold).
-3. Order creation & execution: `src/engine.py` converts signals into `Order` objects and simulates execution (fills, partial fills, slippage — depending on implementation).
-4. Portfolio accounting: the engine updates positions, cash, and computes realized/unrealized P&L.
-5. Reporting: `src/reporting.py` computes performance metrics and produces plots or tables for analysis.
-
-Embed or view the workflow diagram in the repository to follow the visual flow; it is stored in the `img/` folder as a PDF.
+**Step-by-step:**
+1. Load historical price data using `PriceLoader`.
+2. Instantiate one or more strategy classes (e.g., `MovingAverageCrossoverStrategy`).
+3. Pass data and strategies to `ExecutionEngine`.
+4. Run the engine to simulate trades and update portfolio.
+5. Generate performance reports and visualizations.
 
 ## Tests
 Check tests/test_models.py file for the implementation
