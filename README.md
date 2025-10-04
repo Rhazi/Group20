@@ -200,14 +200,6 @@ The engine calls `generate_singals` for each market datapoint and converts retur
 
 The workflow now reflects the updated logic in `main.py`:
 
-```mermaid
-flowchart TD
-    A[Load price data<br>PriceLoader.load_data()] --> B[Initialize strategies<br>e.g. MovingAverageCrossoverStrategy()]
-    B --> C[Create ExecutionEngine<br>with data & strategies]
-    C --> D[Run engine<br>engine.run()]
-    D --> E[Generate report<br>Reporter or notebook]
-```
-
 **Step-by-step:**
 1. Load historical price data using `PriceLoader`.
 2. Instantiate one or more strategy classes (e.g., `MovingAverageCrossoverStrategy`).
