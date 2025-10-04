@@ -5,6 +5,11 @@ import os
 from models import MarketDataPoint
 from constants import *
 
+'''
+    PriceLoader only for reporting purpose
+    - added parse and filter by date range
+    - default date range: 2024-09-01 ~ 2024-09-05
+'''
 class PriceLoader:
     def __init__(self):
         print('Initializing PriceLoader...')
@@ -75,13 +80,11 @@ class PriceLoader:
                 self.download_price(ticker, start_date=start_date, end_date=end_date).to_parquet(data_path, index=False)
             
             df = pd.read_parquet(data_path)
-            # 이부분 start, end_date 받을 수 있도록 로직 추가 #################################################################
-            # timestamp 열 없으면 스킵
+            #timestamp filtering
             if 'timestamp' not in df.columns:
                 print(f"Skipping {ticker}: no timestamp column in {fn}")
                 continue
 
-            # 날짜 필터링
             start_ts = pd.Timestamp(start_date)
             end_ts = pd.Timestamp(end_date)
             mask = (df['timestamp'] >= start_ts) & (df['timestamp'] <= end_ts)
@@ -90,7 +93,6 @@ class PriceLoader:
             if df.empty:
                 print(f"Skipping {ticker}: no data in range {start_date} ~ {end_date}")
                 continue
-
 
             # update market data dict based on timestamp
             for _, row in df.iterrows():

@@ -81,7 +81,7 @@ class PriceLoader:
                                                             row['close'], row['high'], row['low'], row['open'],
                                                             row['volume']))
         
-        # market_data_dict = dict(sorted(market_data_dict.items())[:50])
+        market_data_dict = dict(sorted(market_data_dict.items())[:50])
         return market_data_dict
         
 if __name__ == "__main__":
